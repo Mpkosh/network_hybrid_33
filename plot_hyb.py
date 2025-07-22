@@ -59,6 +59,7 @@ def plot_one(ax,
     rmse_I = rmse(actual_I, predicted_I[0])
     
     actual_Beta = seed_df.iloc[predicted_days[0]:]['Beta'].values 
+    actual_Beta = np.nan_to_num(actual_Beta)
     predicted_beta = predicted_beta[:actual_Beta.shape[0]]
     rmse_Beta = rmse(actual_Beta, predicted_beta)   
 
@@ -180,7 +181,7 @@ def main_f(I_prediction_method, stochastic, count_stoch_line,
     for idx, seed_number in enumerate(seed_numbers):
         #print(seed_number)
         # read the DataFrame of the seed: S,[E],I,R,Beta
-        seed_df = pd.read_csv(seed_number)
+        seed_df = pd.read_csv(seed_dirs+f'seir_seed_{seed_number}.csv')
         seed_df = seed_df.iloc[:,:5].copy()
         seed_df.columns = ['S','E','I','R','Beta']
         
@@ -189,7 +190,7 @@ def main_f(I_prediction_method, stochastic, count_stoch_line,
         if end_df.shape[0]:
             seed_df = seed_df.iloc[:end_df.index[0]].copy()
         
-        if seed_df['I'].max() < 10000:
+        if seed_df['I'].max() < 10:
             pass
         else:
             
