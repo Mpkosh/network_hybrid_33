@@ -216,7 +216,7 @@ def predict_beta(I_prediction_method, seed_df, beta_prediction_method, predicted
         R[0:count_stoch_line+1,0] = seed_df.iloc[predicted_days[0]]['R']  
         E[0:count_stoch_line+1,0] = seed_df.iloc[predicted_days[0]]['E'] 
         
-        features_reg = ['day','prev_I','S','E','I','R']
+        features_reg = ['day','S','E','I','R']
         
         total_len = len(features_reg)    
         if total_len == 3:
