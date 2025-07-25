@@ -55,12 +55,14 @@ def plot_one(ax,
     peak = [actual_peak_I, predicted_peak_I,actual_peak_day,predicted_peak_day] 
 
     # calculate RMSE for Infected and Beta values
-    actual_I = seed_df.iloc[predicted_days[0]:]['I'].values 
-    rmse_I = rmse(actual_I, predicted_I[0])
+    actual_I = seed_df.iloc[predicted_days[0]:]['I'].values
+    rmse_I = rmse(np.nan_to_num(actual_I, neginf=0, posinf=0),
+                  np.nan_to_num(predicted_I[0], neginf=0, posinf=0))
     
     actual_Beta = seed_df.iloc[predicted_days[0]:]['Beta'].values 
-    actual_Beta = np.nan_to_num(actual_Beta)
+    actual_Beta = np.nan_to_num(actual_Beta, neginf=0, posinf=0)
     predicted_beta = predicted_beta[:actual_Beta.shape[0]]
+    predicted_beta = np.nan_to_num(predicted_beta, neginf=0, posinf=0)
     rmse_Beta = rmse(actual_Beta, predicted_beta)   
 
     # display boundary of switch 
@@ -129,7 +131,8 @@ def plot_one(ax,
 def main_f(I_prediction_method, stochastic, count_stoch_line, 
            beta_prediction_method, type_start_day, seed_numbers,
            show_fig_flag, seed_dirs='test/', sigma=0.1, gamma=0.08,
-           ax = None, model_path=''):
+           ax = None, model_path='',
+          is_filename=False):
     '''
     Main function
     
@@ -181,7 +184,13 @@ def main_f(I_prediction_method, stochastic, count_stoch_line,
     for idx, seed_number in enumerate(seed_numbers):
         #print(seed_number)
         # read the DataFrame of the seed: S,[E],I,R,Beta
-        seed_df = pd.read_csv(seed_dirs+f'seir_seed_{seed_number}.csv')
+        if is_filename:
+            seed_df = pd.read_csv(seed_number)
+            window_size = 7
+        else:
+            seed_df = pd.read_csv(seed_dirs+f'seir_seed_{seed_number}.csv')
+            window_size = 14
+            
         seed_df = seed_df.iloc[:,:5].copy()
         seed_df.columns = ['S','E','I','R','Beta']
         
@@ -196,7 +205,8 @@ def main_f(I_prediction_method, stochastic, count_stoch_line,
             
             # switch moment
             
-            start_day = choice_start_day.choose_method(seed_df, type_start_day)
+            start_day = choice_start_day.choose_method(seed_df, type_start_day,
+                                                       min_day=window_size)
             # ЗА сколько ДО пика
             if not isinstance(type_start_day, str):
                 start_day = seed_df.I.argmax() - start_day
@@ -210,7 +220,7 @@ def main_f(I_prediction_method, stochastic, count_stoch_line,
             beggining_beta, predicted_beta, predicted_I = predict_Beta_I.predict_beta(
                                 I_prediction_method, seed_df, beta_prediction_method, 
                                 predicted_days, stochastic, count_stoch_line, sigma, gamma,
-                                features_reg, model_path)
+                                features_reg, model_path, window_size)
 
             if (beta_prediction_method != 'regression (day, SEIR, previous I)') & (
                 beta_prediction_method != 'lstm (day, E, previous I)'):

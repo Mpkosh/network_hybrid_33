@@ -100,7 +100,7 @@ class LSTMPredictor:
     
 def predict_beta(I_prediction_method, seed_df, beta_prediction_method, predicted_days, 
                  stochastic, count_stoch_line, sigma, gamma, 
-                 features_reg='', model_path=''):
+                 features_reg='', model_path='', window_size=14):
     
     '''
     Predict Beta values.
@@ -216,7 +216,7 @@ def predict_beta(I_prediction_method, seed_df, beta_prediction_method, predicted
         R[0:count_stoch_line+1,0] = seed_df.iloc[predicted_days[0]]['R']  
         E[0:count_stoch_line+1,0] = seed_df.iloc[predicted_days[0]]['E'] 
         
-        features_reg = ['day','S','E','I','R']
+        features_reg = ['day','prev_I','S','E','I','R']
         
         total_len = len(features_reg)    
         if total_len == 3:
@@ -289,17 +289,7 @@ def predict_beta(I_prediction_method, seed_df, beta_prediction_method, predicted
             
             
             X_input = [var_dict[feature] for feature in features_reg]
-            '''
-            if idx+predicted_days[0] > 76:
-                print()
-                print(idx+predicted_days[0])
-                print('comps', [S[0,1], E[0,1], predicted_I[0,idx+1], R[0,1]])
-                print('beta', predicted_beta[idx])
-                print('Xinput',X_input)
-                print(predicted_I)
-                
-                print(S[0,1] == 0)
-            '''
+            
             # если СЕИР предсказал где-то 0, тк у S убираем много людей,
             # то у нас будет потом None в следующих S.
             # и модель не сможет сработать. поэтому просто ставим 0
@@ -319,7 +309,8 @@ def predict_beta(I_prediction_method, seed_df, beta_prediction_method, predicted
     elif beta_prediction_method == 'lstm (day, E, previous I)':
         full_scaler = joblib.load(f'{model_path}.pkl')
         model = load_model(f'{model_path}.keras')
-        predictor = LSTMPredictor(model, full_scaler, window_size=14)
+        predictor = LSTMPredictor(model, full_scaler, 
+                                  window_size=window_size)
         '''
         prev_I = seed_df.iloc[predicted_days[0]-2:predicted_days[0]
                              ]['I'].to_numpy(
