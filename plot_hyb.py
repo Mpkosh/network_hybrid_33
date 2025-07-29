@@ -189,7 +189,7 @@ def main_f(I_prediction_method, stochastic, count_stoch_line,
             window_size = 7
         else:
             seed_df = pd.read_csv(seed_dirs+f'seir_seed_{seed_number}.csv')
-            window_size = 14
+            window_size = 7
             
         seed_df = seed_df.iloc[:,:5].copy()
         seed_df.columns = ['S','E','I','R','Beta']

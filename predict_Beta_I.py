@@ -171,10 +171,13 @@ def predict_beta(I_prediction_method, seed_df, beta_prediction_method, predicted
         betas = pd.read_csv(model_path)
         beggining_beta = betas.iloc[:predicted_days[0]]['median_beta'].values
         predicted_beta = betas.iloc[predicted_days[0]:]['median_beta'].values
-        change = seed_df['Beta'].rolling(7).mean()[predicted_days[0]]
-        change = np.sign(change - predicted_beta[0]) * (np.abs(change - predicted_beta[0]))
-        beggining_beta += change
-        predicted_beta += change
+        change = seed_df['Beta'].rolling(7).mean()[predicted_days[0]
+                                                  ] - predicted_beta[0]
+        beggining_beta = beggining_beta + change
+        beggining_beta[beggining_beta<0] = 0
+        predicted_beta = predicted_beta + change
+        predicted_beta[predicted_beta<0] = 0
+        
 
     elif beta_prediction_method == 'regression (day)':
         #model_path = 'regression_day_for_seir.joblib'
@@ -191,10 +194,13 @@ def predict_beta(I_prediction_method, seed_df, beta_prediction_method, predicted
         beggining_beta = np.exp(model.predict(x_test))
         x_test = np.arange(predicted_days[0], seed_df.shape[0]).reshape(-1, 1)
         predicted_beta = np.exp(model.predict(x_test))
-        change = seed_df['Beta'].rolling(7).mean().iloc[predicted_days[0]]
-        change = np.sign(change - predicted_beta[0]) * (np.abs(change - predicted_beta[0]))
-        beggining_beta += change
-        predicted_beta += change 
+        
+        change = seed_df['Beta'].rolling(7).mean()[predicted_days[0]
+                                                  ] - predicted_beta[0]
+        beggining_beta = beggining_beta + change
+        beggining_beta[beggining_beta<0] = 0
+        predicted_beta = predicted_beta + change
+        predicted_beta[predicted_beta<0] = 0
 
     elif beta_prediction_method == 'regression (day);\nincremental learning':
         # model_path = 'regression_day_for_seir.joblib'
@@ -216,7 +222,11 @@ def predict_beta(I_prediction_method, seed_df, beta_prediction_method, predicted
         R[0:count_stoch_line+1,0] = seed_df.iloc[predicted_days[0]]['R']  
         E[0:count_stoch_line+1,0] = seed_df.iloc[predicted_days[0]]['E'] 
         
-        features_reg = ['day','prev_I','S','E','I','R']
+        features_reg = ['day',
+                        #'prev_I',
+                        'S','E','I',
+                        #'R'
+                       ]
         
         total_len = len(features_reg)    
         if total_len == 3:
@@ -224,10 +234,9 @@ def predict_beta(I_prediction_method, seed_df, beta_prediction_method, predicted
         elif total_len == 4:
             suffix = ''.join(features_reg[-2:]).upper()  # два последних
         elif total_len == 5:
-            suffix = ''.join(features_reg[-3:]).upper()  # три последних
+            suffix = ''.join(features_reg[-3:]).upper()  #
         elif total_len == 6:
-            suffix = ''.join(features_reg[-4:]).upper()  # четыре последних
-        #model_path = f'regression_day_{suffix}_prev_I_for_seir.joblib'
+            suffix = ''.join(features_reg[-4:]).upper()  
         y = np.array([S[:,0], E[:,0], predicted_I[:,0], R[:,0]])
         y = y.T
         model = load_saved_model(model_path)
@@ -236,14 +245,15 @@ def predict_beta(I_prediction_method, seed_df, beta_prediction_method, predicted
                              ]['I'
                               ].to_numpy() if predicted_days[0
                                               ] > 1 else np.array([0.0, 0.0])
-        
+        pop = S[0, 0]+E[0, 0]+predicted_I[0, 0]+R[0, 0]
+
         var_dict = {
                     'day': predicted_days[0],
-                    'prev_I': prev_I[0],
-                    'S': S[0, 0],
-                    'E': E[0, 0],
-                    'I': predicted_I[0, 0],
-                    'R': R[0, 0]
+                    'prev_I': prev_I[0]/pop,
+                    'S': S[0, 0]/pop,
+                    'E': E[0, 0]/pop,
+                    'I': predicted_I[0, 0]/pop,
+                    'R': R[0, 0]/pop
         }
         X_input = [var_dict[feature] for feature in features_reg]
 
@@ -277,14 +287,15 @@ def predict_beta(I_prediction_method, seed_df, beta_prediction_method, predicted
            
             y = np.array([S[:,1], E[:,1], predicted_I[:,idx+1], R[:,1]])
             y = y.T
-
+            
+            
             var_dict = {
             'day': predicted_days[idx+1],
-            'S': S[0, 1],
-            'E': E[0, 1],
-            'I': predicted_I[0, idx+1],
-            'R': R[0, 1] ,
-            'prev_I': predicted_I[0,idx]
+            'S': S[0, 1]/pop,
+            'E': E[0, 1]/pop,
+            'I': predicted_I[0, idx+1]/pop,
+            'R': R[0, 1]/pop ,
+            'prev_I': predicted_I[0,idx]/pop
             }
             
             
@@ -328,11 +339,12 @@ def predict_beta(I_prediction_method, seed_df, beta_prediction_method, predicted
                     0] = seed_df.iloc[predicted_days[0]]['I']
         R[0:count_stoch_line+1,0] = seed_df.iloc[predicted_days[0]]['R']  
         E[0:count_stoch_line+1,0] = seed_df.iloc[predicted_days[0]]['E']  
-
+        
+        pop = seed_df.iloc[0,:4].sum()
         # Initialize predictor buffer using the last 'window_size' days
         for i in range(predicted_days[0] - predictor.window_size + 1, predicted_days[0] + 1):
             row = seed_df.iloc[i]
-            raw_features = [row['day'], row['E'], #row['prev_I']
+            raw_features = [row['day'], row['E']/pop, #row['prev_I']
                            ]
             predictor.update_buffer(raw_features)
         y = np.array([S[:,0], E[:,0], predicted_I[:,0], R[:,0]])
@@ -358,11 +370,11 @@ def predict_beta(I_prediction_method, seed_df, beta_prediction_method, predicted
             y = np.array([S[:,1], E[:,1], predicted_I[:,idx+1], R[:,1]])
             y = y.T
             if idx == 0:
-                predictor.update_buffer([predicted_days[idx+1], E[0,1],
+                predictor.update_buffer([predicted_days[idx+1], E[0,1]/pop,
                                          #prev_I[1]
                                         ])
             else:
-                predictor.update_buffer([predicted_days[idx+1], E[0,1],
+                predictor.update_buffer([predicted_days[idx+1], E[0,1]/pop,
                                          #predicted_I[0,idx-1]
                                         ])
                 
