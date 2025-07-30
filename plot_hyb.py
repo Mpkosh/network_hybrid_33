@@ -185,7 +185,7 @@ def main_f(I_prediction_method, stochastic, count_stoch_line,
         #print(seed_number)
         # read the DataFrame of the seed: S,[E],I,R,Beta
         if is_filename:
-            seed_df = pd.read_csv(seed_number)
+            seed_df = pd.read_csv(seed_dirs+seed_number.split('\\')[-1])
             window_size = 7
         else:
             seed_df = pd.read_csv(seed_dirs+f'seir_seed_{seed_number}.csv')
