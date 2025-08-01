@@ -245,7 +245,7 @@ def predict_beta(I_prediction_method, seed_df, beta_prediction_method, predicted
                              ]['I'
                               ].to_numpy() if predicted_days[0
                                               ] > 1 else np.array([0.0, 0.0])
-        pop = S[0, 0]+E[0, 0]+predicted_I[0, 0]+R[0, 0]
+        pop = 1 #S[0, 0]+E[0, 0]+predicted_I[0, 0]+R[0, 0]
 
         var_dict = {
                     'day': predicted_days[0],
