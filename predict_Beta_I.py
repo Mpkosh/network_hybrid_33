@@ -53,7 +53,7 @@ def inc_learning(seed_df, start_day, model_path):
 class LSTMPredictor:
     """
     Wraps the trained LSTM model to predict beta on a rolling window of
-    [day, E, prev_I] (3 features). 
+    [day, E] (2 features). 
     The model was trained to predict normalized log_beta, so this class
     denormalizes the prediction and returns beta.
     """

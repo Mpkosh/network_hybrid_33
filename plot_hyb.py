@@ -91,7 +91,7 @@ def plot_one(ax,
                         alpha=0.6, label='$\mu \pm 3\sigma$' if day == 0 else '')
 
     # display actual and predicted Infected values
-    ax.plot(seed_df.index, seed_df.iloc[:]['I'].values , color='tab:blue', 
+    ax.plot(seed_df.index, seed_df['I'].values , color='tab:blue', 
             label='Actual I')
     ax.plot(predicted_days, predicted_I[0],color='red', ls='-', 
               alpha=0.9, label='Predicted I (det.)')
@@ -109,11 +109,13 @@ def plot_one(ax,
     if len(beggining_beta) > 0:
         given_days = np.arange(predicted_days[0])
         ax_b.plot(given_days, beggining_beta,color='green', ls='--', 
-                  alpha=0.7, label='Predicted Beta ')
+                  alpha=0.7)
     ax_b.plot(predicted_days, predicted_beta,color='green', ls='--', 
               alpha=0.7, label='Predicted Beta ')
     ax_b.set_ylabel("Beta", color='gray')
 
+    ax_b.set_ylim(0, np.max(actual_Beta[:100])*1.1)
+    
     # add legend and titles
     lines1, labels1 = ax.get_legend_handles_labels()
     lines2, labels2 = ax_b.get_legend_handles_labels()
