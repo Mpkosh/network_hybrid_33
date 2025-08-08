@@ -133,7 +133,7 @@ def plot_one(ax,
 def main_f(I_prediction_method, stochastic, count_stoch_line, 
            beta_prediction_method, type_start_day, seed_numbers,
            show_fig_flag, seed_dirs='test/', sigma=0.1, gamma=0.08,
-           ax = None, model_path='',
+           ax = None, model_path='', perc_switch=0.01,
           is_filename=False):
     '''
     Main function
@@ -204,11 +204,15 @@ def main_f(I_prediction_method, stochastic, count_stoch_line,
         if seed_df['I'].max() < 10:
             pass
         else:
-            
             # switch moment
-            
+            pop = seed_df.iloc[0,:4].sum()
+            n_people = pop*perc_switch
+            #if idx==0:
+            #    print(pop, perc_switch, n_people)
+                      
             start_day = choice_start_day.choose_method(seed_df, type_start_day,
-                                                       min_day=window_size)
+                                                       min_day=window_size,
+                                                       n_people=n_people)
             # ЗА сколько ДО пика
             if not isinstance(type_start_day, str):
                 start_day = seed_df.I.argmax() - start_day

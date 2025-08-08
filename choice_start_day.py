@@ -2,7 +2,8 @@ from sklearn.preprocessing import MinMaxScaler
 import numpy as np
 
 
-def choose_method(seed_df, start_day, fraq=0.01, min_day=14):
+def choose_method(seed_df, start_day, fraq=0.01, min_day=14,
+                 n_people=1000):
     if start_day == 'roll_var':
         start_day_v = cpoint_roll_var(seed_df, min_day=min_day)
     elif start_day == 'roll_var_seq':
@@ -10,7 +11,8 @@ def choose_method(seed_df, start_day, fraq=0.01, min_day=14):
     elif start_day == 'fraq_people':
         start_day_v = cpoint_fraq_people(seed_df, fraq, min_day=min_day)
     elif start_day == 'roll_var_npeople':
-        start_day_v = cpoint_roll_var_npeople(seed_df, min_day=min_day)
+        start_day_v = cpoint_roll_var_npeople(seed_df, min_day=min_day, 
+                                              n_people=n_people)
     else:
         start_day_v = start_day
     
