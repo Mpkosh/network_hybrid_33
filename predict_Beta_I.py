@@ -177,7 +177,6 @@ def predict_beta(I_prediction_method, seed_df, beta_prediction_method, predicted
         beggining_beta[beggining_beta<0] = 0
         predicted_beta = predicted_beta + change
         predicted_beta[predicted_beta<0] = 0
-        
 
     elif beta_prediction_method == 'regression (day)':
         #model_path = 'regression_day_for_seir.joblib'
@@ -186,7 +185,20 @@ def predict_beta(I_prediction_method, seed_df, beta_prediction_method, predicted
         beggining_beta = np.exp(model.predict(x_test))
         x_test = np.arange(predicted_days[0], seed_df.shape[0]).reshape(-1, 1)
         predicted_beta = np.exp(model.predict(x_test))
-
+    
+    elif beta_prediction_method == 'regression beta':
+        #model_path = 'regression_day_for_seir.joblib'
+        model = load_saved_model(model_path)
+        ws = 4
+        input_b = seed_df['Beta'].iloc[predicted_days[0]-ws+1:predicted_days[0]+1]
+        input_b = np.log(input_b + 1e-7).values
+        
+        predicted_beta = []
+        for day in range(predicted_days[0]+1, seed_df.shape[0]):
+            pred = model.predict(input_b)
+            predicted_beta.append(pred)
+            input_b = np.array([*pred, input_b[:-1]])
+    
     elif beta_prediction_method == 'regression (day);\nshifted forecast':
         #model_path = 'regression_day_for_seir.joblib'
         model = load_saved_model(model_path)
