@@ -24,7 +24,7 @@ def cpoint_fraq_people(seed_df, fraq=0.01):
     I_clm = seed_df.columns[2]
     n_people = full_pop*fraq
     
-    switch = seed_df[seed_df[I_clm]>=full_pop*fraq]
+    switch = seed_df[seed_df[I_clm]>n_people]
     
     if switch.shape[0]:
         return switch.index[0]
