@@ -19,15 +19,21 @@ def choose_method(seed_df, start_day, fraq=0.01, min_day=14,
     return start_day_v     
 
 
-def cpoint_fraq_people(seed_df, fraq=0.01):
+def cpoint_fraq_people(seed_df, fraq=0.01,
+                      min_day=4):
     full_pop = seed_df.iloc[0,:4].sum()
     I_clm = seed_df.columns[2]
     n_people = full_pop*fraq
     
     switch = seed_df[seed_df[I_clm]>n_people]
     
+    # if there's such a day
     if switch.shape[0]:
-        return switch.index[0]
+        # if it's later than min_day
+        if switch.index[0] > min_day:
+            return switch.index[0]
+        else:
+            return min_day
     else:
         return 0
     

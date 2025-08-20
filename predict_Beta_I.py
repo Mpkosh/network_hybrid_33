@@ -20,36 +20,6 @@ def load_saved_model(model_path):
     return joblib.load(model_path)
 
 
-def biexponential_decay_func(x,a,b,c): 
-    return a*(np.exp(-b*x)- np.exp(-c*x))
-
-
-def inc_learning(seed_df, start_day, model_path):
-    model_il = load_saved_model(model_path)
-
-    x2 = np.arange(start_day).reshape(-1, 1)
-    y2 = seed_df.iloc[:start_day]['Beta'].replace(to_replace=0, 
-                                                  method='bfill'
-                                                 ).replace(to_replace=0,
-                                                           method='ffill'
-                                                          ).values
-    y2 = np.log(y2)
-
-    t = model_il.named_steps['standardscaler'].transform(x2)
-    name_2nd = list(model_il.named_steps.keys())[1]
-    t = model_il.named_steps[name_2nd].transform(t)
-
-    if model_il.named_steps['sgdregressor'].warm_start:
-        # for warm_start=True .use fit()
-        model_il.named_steps['sgdregressor'].fit(t,y2)
-    else:
-        for i in range(3):
-            # for warm_start=False use .partial_fit()
-            model_il.named_steps['sgdregressor'].partial_fit(t,y2)
-
-    return model_il
-
-
 class LSTMPredictor:
     """
     Wraps the trained LSTM model to predict beta on a rolling window of
@@ -111,18 +81,6 @@ def predict_beta(I_prediction_method, seed_df, beta_prediction_method, predicted
         ['seir']
     - seed_df -- DataFrame of seed, created by a regular network
     - beta_prediction_method -- method for predicting Beta values
-        ['last_value',
-        'rolling mean last value',
-        'expanding mean last value',
-        'biexponential decay', 
-        'median beta',
-        'regression (day)'
-
-        'median beta;\nshifted forecast',
-        'regression (day);\nshifted forecast',
-        'regression (day);\nincremental learning',
-        'regression (day, SEIR, previous I)',       
-        'lstm (day, E, previous I)']
     - predicted_days -- days for prediction
     - stochastic -- indicator of the presence of predicted trajectories by a stochastic mathematical model
     - count_stoch_line -- number of trajectories predicted by the stochastic mathematical model
@@ -139,15 +97,17 @@ def predict_beta(I_prediction_method, seed_df, beta_prediction_method, predicted
 
     
     elif beta_prediction_method == 'expanding mean last value':
-        betas = seed_df.iloc[:predicted_days[0]]['Beta'].mean()
-        beggining_beta = [seed_df.iloc[:i]['Beta'].mean() for i in range(predicted_days[0])]
-        predicted_beta = [betas for i in range(predicted_days.shape[0])]
+        beggining_beta = seed_df.Beta.iloc[:predicted_days[0]
+                                          ].expanding(1).mean()
+        last = beggining_beta.iloc[-1]
+        predicted_beta = [last for i in range(predicted_days.shape[0])
+                         ]
 
 
     elif beta_prediction_method == 'median beta':
         betas = pd.read_csv(model_path) #'train/median_beta.csv'
-        beggining_beta = betas.iloc[:predicted_days[0]]['median_beta'].values
-        predicted_beta = betas.iloc[predicted_days[0]:]['median_beta'].values
+        beggining_beta = betas.iloc[:predicted_days[0],-1].values
+        predicted_beta = betas.iloc[predicted_days[0]:,-1].values
 
 
     elif beta_prediction_method == 'regression (day)':
@@ -199,7 +159,22 @@ def predict_beta(I_prediction_method, seed_df, beta_prediction_method, predicted
         window_size=4
         predictor = LSTMPredictor(model, full_scaler, 
                                   window_size=window_size)
-
+        inp = seed_df[['Beta']
+                     ].shift(np.arange(window_size)
+                            ).iloc[predicted_days[0]].values
+        inp = np.log(inp+1e-7)
+        
+        for i in inp[::-1]:
+            predictor.update_buffer([i])
+        
+        predicted_beta = []
+        for i in range(predicted_days[0], 
+                       seed_df.shape[0]):
+            pred = predictor.predict_next()
+            predicted_beta.append(pred)
+            predictor.update_buffer([np.log(pred+1e-7)])
+    
+            
         
     elif beta_prediction_method == 'lstm (day, E, previous I)':
         full_scaler = joblib.load(f'{model_path}.pkl')
@@ -226,7 +201,8 @@ def predict_beta(I_prediction_method, seed_df, beta_prediction_method, predicted
         
         pop = seed_df.iloc[0,:4].sum()
         # Initialize predictor buffer using the last 'window_size' days
-        for i in range(predicted_days[0] - predictor.window_size + 1, predicted_days[0] + 1):
+        for i in range(predicted_days[0] - predictor.window_size + 1, 
+                       predicted_days[0] + 1):
             row = seed_df.iloc[i]
             raw_features = [row['day'], row['E']/pop, #row['prev_I']
                            ]
@@ -234,14 +210,16 @@ def predict_beta(I_prediction_method, seed_df, beta_prediction_method, predicted
         y = np.array([S[:,0], E[:,0], predicted_I[:,0], R[:,0]])
         y = y.T
         
-        for idx in range(predicted_days.shape[0]):
+        for idx in range(predicted_days.shape[0]-1):
             predicted_beta = np.append(predicted_beta, predictor.predict_next())     
-            if idx == predicted_days.shape[0]-1:
-                break      
+            #if idx == predicted_days.shape[0]-1:
+            #    break      
             # prediction of the Infected compartment trajectory
-            S[0,:], E[0,:], predicted_I[0,idx:idx+2], R[0,:] = predict_I(I_prediction_method, y[0], 
+            S[0,:], E[0,:], predicted_I[0,idx:idx+2], \
+                R[0,:] = predict_I(I_prediction_method, y[0], 
                                     predicted_days[idx:idx+2], 
-                                    predicted_beta[idx], sigma, gamma, 'det', beta_t=False)   
+                                    predicted_beta[idx], sigma, gamma, 
+                                    'det', beta_t=False)   
             if stochastic:
                 for i in range(count_stoch_line):
                     S[i+1,:], E[i+1,:], predicted_I[i+1,idx:idx+2], \

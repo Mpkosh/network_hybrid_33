@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 from sklearn.metrics import root_mean_squared_error as rmse
+from sklearn.metrics import r2_score
 import time
 import tkinter as tk
 from tkinter import messagebox
@@ -64,7 +65,13 @@ def plot_one(ax,
     predicted_beta = predicted_beta[:actual_Beta.shape[0]]
     predicted_beta = np.nan_to_num(predicted_beta, neginf=0, posinf=0)
     rmse_Beta = rmse(actual_Beta, predicted_beta)   
-
+    
+    #calc R^2
+    r2 = r2_score(np.nan_to_num(actual_I, neginf=0, posinf=0),
+              np.nan_to_num(predicted_I[0], neginf=0, posinf=0))
+    #calc MAPE
+    
+    
     # display boundary of switch 
     ax.axvline(predicted_days[0], color='red',ls=':')
 
@@ -120,14 +127,14 @@ def plot_one(ax,
     lines1, labels1 = ax.get_legend_handles_labels()
     lines2, labels2 = ax_b.get_legend_handles_labels()
     ax.legend(lines1 + lines2, labels1 + labels2, loc='upper right')
-    ax.set_title(f'Seed {seed_number}, Switch day {predicted_days[0]}\n'+
+    ax.set_title(f'Switch day {predicted_days[0]}\n'+
                  f'Peak I (act.):{actual_peak_I:.2f}, '+
                    f'Peak day (act.):{actual_peak_day:.2f}, \n' +
                  f'Peak I (pred.):{predicted_peak_I:.2f}, '+
                    f'Peak day (pred.):{predicted_peak_day:.2f}, \n' +
                  f'RMSE I:{rmse_I:.2f}, RMSE beta:{rmse_Beta:.2e}, \n'+
                  f'Predict time: {execution_time:.2e}' ,fontsize=10)
-    return rmse_I, rmse_Beta, peak
+    return rmse_I, rmse_Beta, r2, peak
 
 
 def main_f(I_prediction_method, stochastic, count_stoch_line, 
@@ -179,6 +186,7 @@ def main_f(I_prediction_method, stochastic, count_stoch_line,
     # list of RMSE Beta and I for each seed 
     all_rmse_I = []
     all_rmse_Beta = []
+    all_r2 = []
     all_peak = []
     start_days = []
     execution_time = []
@@ -187,18 +195,19 @@ def main_f(I_prediction_method, stochastic, count_stoch_line,
         #print(seed_number)
         # read the DataFrame of the seed: S,[E],I,R,Beta
         if is_filename:
-            seed_df = pd.read_csv(seed_dirs+seed_number.split('\\')[-1])
-            window_size = 7
+            seed_df = pd.read_csv(seed_dirs+seed_number[0])
+            window_size = 4
         else:
             seed_df = pd.read_csv(seed_dirs+f'seir_seed_{seed_number}.csv')
-            window_size = 7
+            window_size = 4
             
         seed_df = seed_df.iloc[:,:5].copy()
         seed_df.columns = ['S','E','I','R','Beta']
+        '''
         temp = seed_df[['E','S']].shift([0,1]).copy()
         seed_df['incidence'] = (temp['E_1'] - temp['E_0']) - \
                                 (temp['S_0'] - temp['S_1'])
-        
+        '''
         seed_df = seed_df[(seed_df['E'] > 0)|(seed_df['I'] > 0)
                          ].fillna(0)
 
@@ -208,8 +217,10 @@ def main_f(I_prediction_method, stochastic, count_stoch_line,
         #if idx==0:
         #    print(pop, perc_switch, n_people)
 
-        start_day = choice_start_day.choose_method(seed_df, type_start_day,
+        start_day = choice_start_day.choose_method(seed_df, 
+                                                   type_start_day,
                                                    min_day=window_size,
+                                                   fraq=perc_switch,
                                                    n_people=n_people)
         # ЗА сколько ДО пика
         if not isinstance(type_start_day, str):
@@ -226,8 +237,7 @@ def main_f(I_prediction_method, stochastic, count_stoch_line,
                             predicted_days, stochastic, count_stoch_line, sigma, gamma,
                             features_reg, model_path, window_size)
 
-        if (beta_prediction_method != 'regression (day, SEIR, previous I)') & (
-            beta_prediction_method != 'lstm (day, E, previous I)'):
+        if beta_prediction_method != '':
              # extract compartment values on the switch day
             y = seed_df.iloc[predicted_days[0],:4]
 
@@ -249,12 +259,13 @@ def main_f(I_prediction_method, stochastic, count_stoch_line,
 
         if ax is None:
             # plot graph for seed_number
-            rmse_I, rmse_Beta, peak = plot_one(axes[idx], 
+            rmse_I, rmse_Beta, r2, peak = plot_one(axes[idx], 
                                                predicted_days, seed_df, predicted_I, 
                                                beggining_beta, predicted_beta, 
                                                seed_number, end_time - start_time)        
             all_rmse_I.append(rmse_I)
             all_rmse_Beta.append(rmse_Beta)
+            all_r2.append(r2)
             all_peak.append(peak)
 
         
@@ -269,15 +280,16 @@ def main_f(I_prediction_method, stochastic, count_stoch_line,
         if len(seed_numbers)%2 == 1:
             fig.delaxes(axes[-1]) 
         '''
-        plt.tight_layout()
+        
         
         # show the plots
         if show_fig_flag:
+            plt.tight_layout()
             plt.show()
         else:
             plt.close(fig)
 
-        return all_rmse_I, all_rmse_Beta, all_peak, execution_time, start_days
+        return all_rmse_I, all_rmse_Beta, all_r2, all_peak, execution_time, start_days
     else :
         return plot_one(axes, predicted_days, seed_df, 
                predicted_I, beggining_beta, predicted_beta, 
