@@ -210,7 +210,7 @@ def main_f(I_prediction_method, stochastic, count_stoch_line,
         '''
         seed_df = seed_df[(seed_df['E'] > 0)|(seed_df['I'] > 0)
                          ].fillna(0)
-
+        seed_df.replace([np.inf, -np.inf], 0, inplace=True)
         # switch moment
         pop = seed_df.iloc[0,:4].sum()
         n_people = pop*perc_switch

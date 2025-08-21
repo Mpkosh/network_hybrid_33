@@ -124,12 +124,14 @@ def predict_beta(I_prediction_method, seed_df, beta_prediction_method, predicted
         model = load_saved_model(model_path)
         ws = 4
         input_b = seed_df[['Beta']].shift(np.arange(1,ws+1)
-                                         ).iloc[predicted_days[0]]
+                                         ).fillna(0).iloc[predicted_days[0]]
         input_b = np.log(input_b + 1e-7).values.reshape(1, -1)
         
         predicted_beta = []
         for day in range(predicted_days[0], seed_df.shape[0]):
             pred = model.predict(input_b)
+            if pred[0]<np.log(1e-7):
+                pred[0] = np.log(1e-7)
             predicted_beta.append(np.exp(pred[0]))
             input_b = np.array([*pred,*input_b.flatten()[:-1]]).reshape(1, -1)
     
@@ -171,6 +173,9 @@ def predict_beta(I_prediction_method, seed_df, beta_prediction_method, predicted
         for i in range(predicted_days[0], 
                        seed_df.shape[0]):
             pred = predictor.predict_next()
+            #print(pred)
+            if pred<0:
+                pred = 0
             predicted_beta.append(pred)
             predictor.update_buffer([np.log(pred+1e-7)])
     
