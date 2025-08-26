@@ -5,7 +5,7 @@ import joblib
 from tensorflow.keras.models import load_model
 from sklearn.preprocessing import StandardScaler
 from scipy.optimize import curve_fit
-from statsmodels.tsa.statespace.sarimax import SARIMAXResults
+#from statsmodels.tsa.statespace.sarimax import SARIMAXResults
 
 # our functions
 import seir_discrete 
