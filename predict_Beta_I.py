@@ -5,7 +5,7 @@ import joblib
 from tensorflow.keras.models import load_model
 from sklearn.preprocessing import StandardScaler
 from scipy.optimize import curve_fit
-from statsmodels.tsa.statespace.sarimax import SARIMAXResults
+#from statsmodels.tsa.statespace.sarimax import SARIMAXResults
 
 # our functions
 import seir_discrete 
@@ -97,7 +97,7 @@ def predict_beta(I_prediction_method, seed_df, beta_prediction_method, predicted
 
     
     elif beta_prediction_method == 'expanding mean last value':
-        beggining_beta = seed_df.Beta.iloc[:predicted_days[0]
+        beggining_beta = seed_df.Beta.iloc[:predicted_days[0]+1
                                           ].expanding(1).mean()
         last = beggining_beta.iloc[-1]
         predicted_beta = [last for i in range(predicted_days.shape[0])
@@ -106,17 +106,8 @@ def predict_beta(I_prediction_method, seed_df, beta_prediction_method, predicted
 
     elif beta_prediction_method == 'median beta':
         betas = pd.read_csv(model_path) #'train/median_beta.csv'
-        beggining_beta = betas.iloc[:predicted_days[0],-1].values
+        beggining_beta = betas.iloc[:predicted_days[0]+1,-1].values
         predicted_beta = betas.iloc[predicted_days[0]:,-1].values
-
-
-    elif beta_prediction_method == 'regression (day)':
-        #model_path = 'regression_day_for_seir.joblib'
-        model = load_saved_model(model_path)
-        x_test = np.arange(0,predicted_days[0]).reshape(-1, 1)
-        beggining_beta = np.exp(model.predict(x_test))
-        x_test = np.arange(predicted_days[0], seed_df.shape[0]).reshape(-1, 1)
-        predicted_beta = np.exp(model.predict(x_test))
     
     
     elif beta_prediction_method == 'regression beta':
@@ -178,72 +169,6 @@ def predict_beta(I_prediction_method, seed_df, beta_prediction_method, predicted
                 pred = 0
             predicted_beta.append(pred)
             predictor.update_buffer([np.log(pred+1e-7)])
-    
-            
-        
-    elif beta_prediction_method == 'lstm (day, E, previous I)':
-        full_scaler = joblib.load(f'{model_path}.pkl')
-        model = load_model(f'{model_path}.keras')
-        predictor = LSTMPredictor(model, full_scaler, 
-                                  window_size=window_size)
-        '''
-        prev_I = seed_df.iloc[predicted_days[0]-2:predicted_days[0]
-                             ]['I'].to_numpy(
-            ) if predicted_days[0] > 1 else np.array([0.0, 0.0])
-        '''
-        seed_df['day'] = range(len(seed_df))
-        #seed_df['prev_I'] = seed_df['I'].shift(2).fillna(0)
-        predicted_beta = np.empty((0,))
-        S = np.zeros((count_stoch_line+1, 2))
-        E = np.zeros((count_stoch_line+1, 2))
-        R = np.zeros((count_stoch_line+1, 2))
-
-        S[0:count_stoch_line+1,0] = seed_df.iloc[predicted_days[0]]['S']
-        predicted_I[0:count_stoch_line+1,
-                    0] = seed_df.iloc[predicted_days[0]]['I']
-        R[0:count_stoch_line+1,0] = seed_df.iloc[predicted_days[0]]['R']  
-        E[0:count_stoch_line+1,0] = seed_df.iloc[predicted_days[0]]['E']  
-        
-        pop = seed_df.iloc[0,:4].sum()
-        # Initialize predictor buffer using the last 'window_size' days
-        for i in range(predicted_days[0] - predictor.window_size + 1, 
-                       predicted_days[0] + 1):
-            row = seed_df.iloc[i]
-            raw_features = [row['day'], row['E']/pop, #row['prev_I']
-                           ]
-            predictor.update_buffer(raw_features)
-        y = np.array([S[:,0], E[:,0], predicted_I[:,0], R[:,0]])
-        y = y.T
-        
-        for idx in range(predicted_days.shape[0]-1):
-            predicted_beta = np.append(predicted_beta, predictor.predict_next())     
-            #if idx == predicted_days.shape[0]-1:
-            #    break      
-            # prediction of the Infected compartment trajectory
-            S[0,:], E[0,:], predicted_I[0,idx:idx+2], \
-                R[0,:] = predict_I(I_prediction_method, y[0], 
-                                    predicted_days[idx:idx+2], 
-                                    predicted_beta[idx], sigma, gamma, 
-                                    'det', beta_t=False)   
-            if stochastic:
-                for i in range(count_stoch_line):
-                    S[i+1,:], E[i+1,:], predicted_I[i+1,idx:idx+2], \
-                        R[i+1,:] = predict_I(I_prediction_method,
-                                             y[i+1],
-                                             predicted_days[idx:idx+2], 
-                                             predicted_beta[idx], 
-                                             sigma, gamma, 
-                                             'stoch', beta_t=False) 
-            y = np.array([S[:,1], E[:,1], predicted_I[:,idx+1], R[:,1]])
-            y = y.T
-            if idx == 0:
-                predictor.update_buffer([predicted_days[idx+1], E[0,1]/pop,
-                                         #prev_I[1]
-                                        ])
-            else:
-                predictor.update_buffer([predicted_days[idx+1], E[0,1]/pop,
-                                         #predicted_I[0,idx-1]
-                                        ])
                 
     return np.array(beggining_beta), np.array(predicted_beta), predicted_I 
 
