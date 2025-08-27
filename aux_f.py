@@ -3,6 +3,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import matplotlib as mpl
+
+from matplotlib.colors import LinearSegmentedColormap
+
 from scipy.spatial import ConvexHull
 import seaborn as sns
 
@@ -48,7 +51,7 @@ def create_boxplots(folder='', switch='', suff='',
                 df = pd.read_csv(f'results/{folder}/'+switch+\
                                  f'/{method}_results{suff}.csv')
                 if trim:
-                    df = df[df[switch]!=0]
+                    df = df[df['actual_peak_day']!=1]
                 
                 rmse_df[f"{label}"] = df[metric]
                 print(f'Median RMSE for {label}',
@@ -278,32 +281,46 @@ def df_metrics(folder_name, test_suff='', switch='',
 def flatten(xss):
     return [x for xs in xss for x in xs]
 
+# Andrew's
+def nonlinear_norm(x):
+    # Быстрый рост от 0 до 0.8 (линейный)
+    # Плавный переход от 0.8 до 0.95 (квадратный корень)
+    # Очень медленный рост от 0.95 до 1 (логарифмический)
+    return x**4
 
 def metric_hmaps(fin, met, suff=''):
     clean_mnames, methods = get_mnames()
-    fig = plt.figure(figsize=(12,12))
-    gs = gridspec.GridSpec(3, 5) 
+    fig = plt.figure(figsize=(15,10))
+    gs = gridspec.GridSpec(5, 3) 
     n = ['a)','b)','c)','d)','e)'][::-1]
     
     nice_label = ''
-    if met == 'r2':
+    if 'r2' in met:
         nice_label=r'$R^2$'
-        
+    
+    cm = plt.cm.RdYlGn
+    colors = cm(np.linspace(0, 1, 256))
+    new_colors = colors[(nonlinear_norm(np.linspace(0, 1, 256)
+                                       ) * 255).astype(int)]
+    nonlinear_cmap = LinearSegmentedColormap.from_list('nonlinear_plasma', 
+                                                       new_colors)
+
     for method, label, r, c in zip(flatten(methods),
                                  flatten(clean_mnames),
-                                [0,0,1,1,2],
-                                [0,2,0,2,1]):
+                                [0,2,0,2,1],
+                                [0,0,1,1,2]):
         try:
             data = fin.pivot(columns='beta', index='alpha', 
                              values=f'{met}.{method}')
-            ax_i = plt.subplot(gs[r, c:c+2])
+            ax_i = plt.subplot(gs[r:r+2, c])
             sns.heatmap(data.sort_index(level=1, 
                                         ascending=False), 
-                        vmin=-1, vmax=1,cmap='PiYG',
+                        vmin=0, vmax=1,cmap=nonlinear_cmap,
                         ax=ax_i,
-                        yticklabels = 10, 
-                   xticklabels=10,
-                        cbar_kws={'label': nice_label})
+                        yticklabels = 10, xticklabels=10,
+                        linewidths=0.0, rasterized=True,
+                        #cbar_kws={'label': nice_label}
+                       )
             ax_i.collections[0].cmap.set_bad('0.7')
             ax_i.set_xlabel(r'$\beta$')
             ax_i.set_ylabel(r'$\alpha$')
@@ -311,11 +328,16 @@ def metric_hmaps(fin, met, suff=''):
             ax_i.set_title(label)
             ax_i.text(-0.1, 1.1, n.pop(),
                       transform=ax_i.transAxes, size=15)
+            cbar = ax_i.collections[0].colorbar
+            cbar.set_label(nice_label, rotation=0)
+            
         except KeyError:
             pass
+        
+    
     
     plt.tight_layout()
-    plt.savefig(f'results/hmap_{suff}.pdf', format='pdf', 
+    plt.savefig(f'results/hmap{suff}.pdf', format='pdf', 
                 bbox_inches='tight')
     
     
@@ -324,7 +346,7 @@ def peaks_hmaps(fin, with_inc=False):
     fig, axes = plt.subplots(1, 2, figsize=(16, 6))
     ax=axes.flatten()
 
-    cmap = mpl.cm.PiYG
+    cmap = mpl.cm.RdYlGn
     n = ['a)','b)'][::-1]
     
     if with_inc:
@@ -338,9 +360,10 @@ def peaks_hmaps(fin, with_inc=False):
     data = fin.pivot(columns='beta', index='alpha', 
                      values=f'actual_peak_day{suff}')
     ax_1 = sns.heatmap(data.sort_index(level=1, ascending=False), 
-                       cmap='PiYG', ax=ax[0], norm=norm, 
+                       cmap=cmap, ax=ax[0], norm=norm, 
                        cbar_kws={'extendfrac': .1},
-                      xticklabels = 10, yticklabels=10)
+                      xticklabels = 10, yticklabels=10,
+                      linewidths=0.0, rasterized=True,)
     ax_1.set_title('Peak time', fontsize=1.2*fontsize)
 
     colorbar = ax_1.collections[0].colorbar
@@ -357,9 +380,10 @@ def peaks_hmaps(fin, with_inc=False):
     data = fin.pivot(columns='beta', index='alpha', 
                      values=f'actual_peak_I{suff[2:]}')
     ax_2 = sns.heatmap(data.sort_index(level=1, ascending=False), 
-                       cmap='PiYG', ax=ax[1], norm=norm, 
+                       cmap=cmap, ax=ax[1], norm=norm, 
                        cbar_kws={'extendfrac': .1},
-                      xticklabels = 10, yticklabels=10)
+                      xticklabels = 10, yticklabels=10,
+                      linewidths=0.0, rasterized=True,)
     ax_2.set_title('Peak height', fontsize=1.2*fontsize)
 
     colorbar = ax_2.collections[0].colorbar
