@@ -214,8 +214,8 @@ def main_f(I_prediction_method, stochastic, count_stoch_line,
             seed_df = pd.read_csv(seed_dirs+f'seir_seed_{seed_number}.csv')
             window_size = 4
             
-        seed_df = seed_df.iloc[:,:5].copy()
-        seed_df.columns = ['S','E','I','R','Beta']
+        #seed_df = seed_df.iloc[:,:5].copy()
+        #seed_df.columns = ['S','E','I','R','Beta']
         
         chosen_col='I'
         # calculating Incidence if needed

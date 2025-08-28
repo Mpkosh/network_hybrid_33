@@ -58,8 +58,10 @@ class LSTMPredictor:
         else:
             padded = np.array(self.buffer[-self.window_size:])
             
-        scaled = self.input_scaler.transform(padded)
+        scaled = self.input_scaler.transform(padded) # (4,1)
+        # (1,4,1)
         scaled_window = scaled.reshape(1, self.window_size, self.n_feats)
+        print(scaled_window)
         normalized_pred = self.model.predict(scaled_window, verbose=0)[0][0]
         # Denormalize to obtain the raw log_beta
         raw_log_beta = normalized_pred * self.target_scale + self.target_mean
@@ -159,6 +161,7 @@ def predict_beta(I_prediction_method, seed_df, beta_prediction_method, predicted
         
         for i in inp[::-1]:
             predictor.update_buffer([i])
+        print(predictor.buffer)
         
         predicted_beta = []
         for i in range(predicted_days[0], 

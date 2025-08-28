@@ -355,7 +355,7 @@ def peaks_hmaps(fin, with_inc=False):
         suff = ''
         
     
-    bounds = [0, 2, 100, 200]
+    bounds = [0, 4, 20, 200]
     norm = mpl.colors.BoundaryNorm(bounds, cmap.N)
     data = fin.pivot(columns='beta', index='alpha', 
                      values=f'actual_peak_day{suff}')
@@ -370,12 +370,12 @@ def peaks_hmaps(fin, with_inc=False):
     tick_locs = np.linspace(bounds[0], bounds[-1], 
                             2 * len(bounds) + 1)[1::2]
     colorbar.set_ticks(np.mean([bounds[1:], bounds[:-1]], 0))
-    colorbar.set_ticklabels(['1', 
+    colorbar.set_ticklabels([f'[1, {bounds[1]})', 
                              f'[{bounds[1]}, {bounds[2]-1})',
                              f'[{bounds[2]}, 150)'])
     
     
-    bounds = [0, 11, 5000, 10000, 100000]
+    bounds = [0, 1000, 5000, 10000, 100000]
     norm = mpl.colors.BoundaryNorm(bounds, cmap.N)
     data = fin.pivot(columns='beta', index='alpha', 
                      values=f'actual_peak_I{suff[2:]}')
@@ -391,8 +391,8 @@ def peaks_hmaps(fin, with_inc=False):
                             2 * len(bounds) + 1)[1::2]
     colorbar.set_ticks(np.mean([bounds[1:], bounds[:-1]], 0))
     
-    colorbar.set_ticklabels([r'$I_0$', 
-                             r'($I_0$, 5/%)', 
+    colorbar.set_ticklabels([r'(0, 1/%)', 
+                             r'[1/%, 5/%)', 
                              f'[5%, 10%)', 
                              '[10%, 100%)'])
     
