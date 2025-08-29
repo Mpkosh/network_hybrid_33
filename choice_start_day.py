@@ -30,7 +30,7 @@ def cpoint_fraq_people(chosen_col, seed_df, n_people,
         else:
             return min_day
     else:
-        return 0
+        return min_day
     
 
 # wait until 1% of population is infected, 
