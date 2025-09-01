@@ -51,7 +51,7 @@ def create_boxplots(folder='', switch='', suff='',
                 df = pd.read_csv(f'results/{folder}/'+switch+\
                                  f'/{method}_results{suff}.csv')
                 if trim:
-                    df = df[df['actual_peak_day']!=1]
+                    df = df[df['actual_peak_Inc']>1000]
                 
                 rmse_df[f"{label}"] = df[metric]
                 print(f'Median RMSE for {label}',
@@ -106,7 +106,7 @@ def create_boxplots(folder='', switch='', suff='',
         
         
 def create_peak_plot(folder = 'new_ba_10k', switch = 'roll_var_npeople',
-                    with_outliers=True, same_lims=False, suf='', figsize=(8,4)):
+                    with_outliers=True, same_lims=False, suff='', figsize=(8,4)):
     fig, axes = plt.subplots(1,2, figsize=figsize)
     axes = axes.flatten()
 
@@ -119,13 +119,15 @@ def create_peak_plot(folder = 'new_ba_10k', switch = 'roll_var_npeople',
     ax = axes[0]
 
     all_methods = [['Last value',
-        'Cumulative Average','Median'], 
+        #'Cumulative Average',
+                    'Median'], 
 
         ['Regression',    
         'LSTM'
         ]]
     all_new_labels = [['last_value',#'rolling_mean_last_value',
-        'expanding_mean_last_value','median_beta'
+        #'expanding_mean_last_value',
+                       'median_beta'
                   ], 
         ['regression_beta',       
         'lstm_day_E_previous_I'
@@ -137,7 +139,7 @@ def create_peak_plot(folder = 'new_ba_10k', switch = 'roll_var_npeople',
                                           all_methods, all_new_labels):
         plot_peaks_ax(axes[i], sub_methods, sub_labels, folder, switch,
                      x_lim, y_lim, size_m, alpha_m, alpha_area,
-                     with_outliers, suf)
+                     with_outliers, suff)
         if same_lims:
             ymin = np.min([ymin, axes[i].get_ylim()[0]])
             ymax = np.max([ymax, axes[i].get_ylim()[1]])
@@ -174,7 +176,7 @@ def find_outliers(vals):
 
 def plot_peaks_ax(ax, methods, new_labels, folder, switch,
                  x_lim = (-130, 20), y_lim = (0.6, 2.3), size_m=120,
-                  alpha_m=0.4, alpha_area=0.35, with_outliers=True, suf=''):
+                  alpha_m=0.4, alpha_area=0.35, with_outliers=True, suff=''):
     ax.axvline(x=0, color='black', linestyle='--', 
                linewidth=1)
     ax.axhline(y=1, color='black', linestyle='--', 
@@ -186,7 +188,7 @@ def plot_peaks_ax(ax, methods, new_labels, folder, switch,
     
     for name, method in zip(new_labels, methods):
         try:
-            p_df = pd.read_csv(f'results/{folder}/{switch}/{name}_results{suf}.csv')
+            p_df = pd.read_csv(f'results/{folder}/{switch}/{name}_results{suff}.csv')
             #df = df[df[type_start_day]!=0]
             p_df = p_df[p_df['actual_peak_Inc']>10]
             pt = p_df['predicted_peak_day_inc'] - p_df['actual_peak_day_Inc']
@@ -288,7 +290,8 @@ def nonlinear_norm(x):
     # Очень медленный рост от 0.95 до 1 (логарифмический)
     return x**4
 
-def metric_hmaps(fin, met, suff=''):
+
+def metric_hmaps(fin, met, suff='', exclude=[]):
     clean_mnames, methods = get_mnames()
     fig = plt.figure(figsize=(15,10))
     gs = gridspec.GridSpec(5, 3) 
@@ -304,35 +307,42 @@ def metric_hmaps(fin, met, suff=''):
                                        ) * 255).astype(int)]
     nonlinear_cmap = LinearSegmentedColormap.from_list('nonlinear_plasma', 
                                                        new_colors)
+    
+    #rows = [0,2,0,2,1][::-1]
+    rows = [0,0,2,2,1][::-1]
+    #cols = [0,0,1,1,2][::-1]
+    cols = [0,1,0,1,2][::-1]
+    
+    
+    for method, label in zip(flatten(methods),
+                             flatten(clean_mnames)):
+        if label not in exclude:
+            try:
+                data = fin.pivot(columns='beta', index='alpha', 
+                                 values=f'{met}.{method}')
+                r = rows.pop()
+                c = cols.pop()
+                ax_i = plt.subplot(gs[r:r+2, c])
+                sns.heatmap(data.sort_index(level=1, 
+                                            ascending=False), 
+                            vmin=0, vmax=1,cmap=nonlinear_cmap,
+                            ax=ax_i,
+                            yticklabels = 10, xticklabels=10,
+                            linewidths=0.0, rasterized=True,
+                            #cbar_kws={'label': nice_label}
+                           )
+                ax_i.collections[0].cmap.set_bad('0.7')
+                ax_i.set_xlabel(r'$\beta$')
+                ax_i.set_ylabel(r'$\alpha$')
 
-    for method, label, r, c in zip(flatten(methods),
-                                 flatten(clean_mnames),
-                                [0,2,0,2,1],
-                                [0,0,1,1,2]):
-        try:
-            data = fin.pivot(columns='beta', index='alpha', 
-                             values=f'{met}.{method}')
-            ax_i = plt.subplot(gs[r:r+2, c])
-            sns.heatmap(data.sort_index(level=1, 
-                                        ascending=False), 
-                        vmin=0, vmax=1,cmap=nonlinear_cmap,
-                        ax=ax_i,
-                        yticklabels = 10, xticklabels=10,
-                        linewidths=0.0, rasterized=True,
-                        #cbar_kws={'label': nice_label}
-                       )
-            ax_i.collections[0].cmap.set_bad('0.7')
-            ax_i.set_xlabel(r'$\beta$')
-            ax_i.set_ylabel(r'$\alpha$')
+                ax_i.set_title(label)
+                ax_i.text(-0.1, 1.1, n.pop(),
+                          transform=ax_i.transAxes, size=15)
+                cbar = ax_i.collections[0].colorbar
+                cbar.set_label(nice_label, rotation=0)
 
-            ax_i.set_title(label)
-            ax_i.text(-0.1, 1.1, n.pop(),
-                      transform=ax_i.transAxes, size=15)
-            cbar = ax_i.collections[0].colorbar
-            cbar.set_label(nice_label, rotation=0)
-            
-        except KeyError:
-            pass
+            except KeyError:
+                pass
         
     
     
@@ -343,7 +353,7 @@ def metric_hmaps(fin, met, suff=''):
     
 def peaks_hmaps(fin, with_inc=False):
     fontsize = 14
-    fig, axes = plt.subplots(1, 2, figsize=(16, 6))
+    fig, axes = plt.subplots(1, 2, figsize=(15, 6))
     ax=axes.flatten()
 
     cmap = mpl.cm.RdYlGn
@@ -355,17 +365,18 @@ def peaks_hmaps(fin, with_inc=False):
         suff = ''
         
     
-    bounds = [0, 4, 20, 200]
-    norm = mpl.colors.BoundaryNorm(bounds, cmap.N)
+    #bounds = [0, 4, 20, 200]
+    #norm = mpl.colors.BoundaryNorm(bounds, cmap.N)
     data = fin.pivot(columns='beta', index='alpha', 
                      values=f'actual_peak_day{suff}')
     ax_1 = sns.heatmap(data.sort_index(level=1, ascending=False), 
-                       cmap=cmap, ax=ax[0], norm=norm, 
+                       cmap=cmap, ax=ax[0], #norm=norm, 
                        cbar_kws={'extendfrac': .1},
+                       vmax=40,
                       xticklabels = 10, yticklabels=10,
                       linewidths=0.0, rasterized=True,)
     ax_1.set_title('Peak time', fontsize=1.2*fontsize)
-
+    '''
     colorbar = ax_1.collections[0].colorbar
     tick_locs = np.linspace(bounds[0], bounds[-1], 
                             2 * len(bounds) + 1)[1::2]
@@ -374,32 +385,21 @@ def peaks_hmaps(fin, with_inc=False):
                              f'[{bounds[1]}, {bounds[2]-1})',
                              f'[{bounds[2]}, 150)'])
     
+    '''
     
-    bounds = [0, 1000, 5000, 10000, 100000]
-    norm = mpl.colors.BoundaryNorm(bounds, cmap.N)
     data = fin.pivot(columns='beta', index='alpha', 
-                     values=f'actual_peak_I{suff[2:]}')
+                     values=f'actual_peak_I{suff[2:]}')/100000
     ax_2 = sns.heatmap(data.sort_index(level=1, ascending=False), 
-                       cmap=cmap, ax=ax[1], norm=norm, 
+                       cmap=cmap, ax=ax[1], #norm=norm, 
                        cbar_kws={'extendfrac': .1},
                       xticklabels = 10, yticklabels=10,
                       linewidths=0.0, rasterized=True,)
     ax_2.set_title('Peak height', fontsize=1.2*fontsize)
 
-    colorbar = ax_2.collections[0].colorbar
-    tick_locs = np.linspace(bounds[0], bounds[-1], 
-                            2 * len(bounds) + 1)[1::2]
-    colorbar.set_ticks(np.mean([bounds[1:], bounds[:-1]], 0))
-    
-    colorbar.set_ticklabels([r'(0, 1/%)', 
-                             r'[1/%, 5/%)', 
-                             f'[5%, 10%)', 
-                             '[10%, 100%)'])
-    
     
     for ax_i in [ax_1, ax_2]:
         ax_i.text(-0.1, 1.1, n.pop(),
-                  transform=ax_i.transAxes, size=15)
+                  transform=ax_i.transAxes, size=1.5*fontsize)
         ax_i.collections[0].cmap.set_bad('0.7')
         ax_i.set_xlabel(r'$\beta$', fontsize=1.2*fontsize)
         ax_i.set_ylabel(r'$\alpha$', fontsize=1.2*fontsize)
@@ -407,7 +407,78 @@ def peaks_hmaps(fin, with_inc=False):
     for i in [-1,-2]:    
         ax_1.figure.axes[i].tick_params(labelsize=fontsize)
         
-    ax_1.figure.axes[-1].set_ylabel('Percent of infected', size=fontsize)
+    ax_1.figure.axes[-1].set_ylabel('Fraction of infected', size=fontsize)
+    ax_1.figure.axes[-2].set_ylabel('Day', size=fontsize)
+    
+    plt.tight_layout()
+    #plt.savefig(f'results/actual.pdf', format='pdf', bbox_inches='tight')
+    
+    
+def smth_hmaps(fin):
+    fontsize = 14
+    fig, axes = plt.subplots(1, 2, figsize=(15, 6))
+    ax=axes.flatten()
+
+    cmap = mpl.cm.RdYlGn
+    n = ['a)','b)'][::-1]
+
+    #ticks=np.arange(1,22)
+    #boundaries = np.arange(1-.5, 21+1.5 )
+
+    data = fin.pivot(columns='beta', index='alpha', 
+                     values=f'days_before_peak')
+    ax_1 = sns.heatmap(data.sort_index(level=1, ascending=False), 
+                       cmap=cmap, ax=ax[0], #norm=norm, 
+                       cbar_kws={'extendfrac': .1,
+                                #"ticks":ticks, "boundaries":boundaries
+                                },
+                       vmax=14,
+                      xticklabels = 10, yticklabels=10,
+                      linewidths=0.0, rasterized=True,)
+    ax_1.set_title('Days from switch to peak', fontsize=1.2*fontsize)
+
+    colorbar = ax_1.collections[0].colorbar
+    '''
+    tick_locs = np.linspace(bounds[0], bounds[-1], 
+                            2 * len(bounds) + 1)[1::2]
+    colorbar.set_ticks(np.mean([bounds[1:], bounds[:-1]], 0))
+    colorbar.set_ticklabels([f'[1, {bounds[1]})', 
+                             f'[{bounds[1]}, {bounds[2]-1})',
+                             f'[{bounds[2]}, 150)'])
+    '''
+    data = fin.pivot(columns='beta', index='alpha', 
+                     values=f'switch')
+    ax_2 = sns.heatmap(data.sort_index(level=1, ascending=False), 
+                       cmap=cmap, ax=ax[1], #norm=norm, 
+                       cbar_kws={'extendfrac': .1},
+                       vmax=14,
+                      xticklabels = 10, yticklabels=10,
+                      linewidths=0.0, rasterized=True,)
+    ax_2.set_title('Day of switch', fontsize=1.2*fontsize)
+
+    colorbar = ax_2.collections[0].colorbar
+    '''
+    tick_locs = np.linspace(bounds[0], bounds[-1], 
+                            2 * len(bounds) + 1)[1::2]
+    colorbar.set_ticks(np.mean([bounds[1:], bounds[:-1]], 0))
+    
+    colorbar.set_ticklabels([r'(0, 1%)', 
+                             r'[1%, 5%)', 
+                             f'[5%, 10%)', 
+                             '[10%, 100%)'])
+    '''
+    
+    for ax_i in [ax_1, ax_2]:
+        ax_i.text(-0.1, 1.1, n.pop(),
+                  transform=ax_i.transAxes, size=1.5*fontsize)
+        ax_i.collections[0].cmap.set_bad('0.7')
+        ax_i.set_xlabel(r'$\beta$', fontsize=1.2*fontsize)
+        ax_i.set_ylabel(r'$\alpha$', fontsize=1.2*fontsize)
+        ax_i.tick_params(axis='both', which='major', labelsize=fontsize)
+    for i in [-1,-2]:    
+        ax_1.figure.axes[i].tick_params(labelsize=fontsize)
+        
+    ax_1.figure.axes[-1].set_ylabel('Day', size=fontsize)
     ax_1.figure.axes[-2].set_ylabel('Day', size=fontsize)
     
     plt.tight_layout()

@@ -154,7 +154,8 @@ def plot_one(ax, chosen_col,
                  f'Peak Inc (act.):{actual_peak_Inc:.2f}, '+
                  f'Peak Inc (pred.):{predicted_peak_Inc:.2f}, \n'+
                  f'R2 I:{r2:.2f} '+
-                 f'R2 Inc:{r2_Inc:.2f} \n',
+                 f'R2 Inc:{r2_Inc:.2f} \n'+
+                 f'RMSE Beta:{rmse_Beta:.7f}',
                  fontsize=10)
     return rmse_I, rmse_Inc, rmse_Beta, r2, r2_Inc, peak
 
@@ -163,7 +164,8 @@ def main_f(I_prediction_method, stochastic, count_stoch_line,
            beta_prediction_method, type_start_day, seed_numbers,
            show_fig_flag, seed_dirs='test/', sigma=0.1, gamma=0.08,
            ax = None, model_path='', perc_switch=0.01,
-          is_filename=False, on_incidence=False):
+          is_filename=False, on_incidence=False,
+          switch_on_incidence=False):
     '''
     Main function
     
@@ -230,20 +232,24 @@ def main_f(I_prediction_method, stochastic, count_stoch_line,
         seed_df = seed_df[(seed_df['E'] > 0)|(seed_df['I'] > 0)
                          ].fillna(0)
         seed_df.replace([np.inf, -np.inf], 0, inplace=True)
+        
         # switch moment
         pop = seed_df.iloc[0,:4].sum()
         n_people = pop*perc_switch
         #if idx==0:
         #    print(pop, perc_switch, n_people)
-
-        start_day = choice_start_day.choose_method(chosen_col,seed_df, 
+        if switch_on_incidence:
+            switch_col='incidence'
+        else:
+            switch_col='I'
+        start_day = choice_start_day.choose_method(switch_col,seed_df, 
                                                    type_start_day,
                                                    min_day=window_size,
                                                    frac=perc_switch,
                                                    n_people=n_people)
         # ЗА сколько ДО пика
         if not isinstance(type_start_day, str):
-            start_day = seed_df[chosen_col].argmax() - start_day
+            start_day = seed_df[switch_col].argmax() - start_day
 
         start_days.append(start_day)
         # choosing the days for prediction
