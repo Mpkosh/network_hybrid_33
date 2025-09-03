@@ -97,11 +97,19 @@ def plot_one(ax, chosen_col,
         to_plot = predicted_I
         
     if to_plot.shape[0] > 1:
-    # display trajectories of the stochastic mathematical model
+        # display trajectories of the stochastic mathematical model
+        '''
         for i in range(to_plot.shape[0]-1):
             ax.plot(predicted_days, to_plot[i+1], color='tab:orange', ls='--', 
                     alpha=0.3, label=f'Predicted {chosen_col} (stoch.)' if i == 0 else '')
-
+        '''
+        # "interval" from min to max    
+        ax.fill_between(x = predicted_days, 
+                        y1=np.min(to_plot, axis=0),
+                        y2=np.max(to_plot, axis=0),
+                       color='red', alpha=0.2,
+                       label='Predicted inc. interval')    
+        '''
         # median calculation
         mean_values = np.mean(to_plot, axis=0) 
         # standard error
@@ -110,6 +118,7 @@ def plot_one(ax, chosen_col,
         lower_bound = mean_values - 3 * std_dev
         upper_bound = mean_values + 3 * std_dev
         lower_bound = np.maximum(lower_bound, 0)
+        
         # add vertical lines with tick marks for confidence intervals
         for day in range(0, len(predicted_days), 5): 
             ax.errorbar(predicted_days[day], mean_values[day],
@@ -117,6 +126,7 @@ def plot_one(ax, chosen_col,
                             [upper_bound[day] - mean_values[day]]], 
                         fmt='o', color='black', capsize=2, markersize=2, elinewidth=1, 
                         alpha=0.6, label='$\mu \pm 3\sigma$' if day == 0 else '')
+        '''               
 
     # display actual and predicted Infected values
     ax.plot(seed_df.index, seed_df[chosen_col].values , color='tab:blue', 
