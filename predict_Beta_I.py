@@ -6,7 +6,7 @@ from tensorflow.keras.models import load_model
 from sklearn.preprocessing import StandardScaler
 from scipy.optimize import curve_fit
 #from statsmodels.tsa.statespace.sarimax import SARIMAXResults
-
+import tensorflow as tf
 # our functions
 import seir_discrete 
 
@@ -62,7 +62,8 @@ class LSTMPredictor:
         # (1,4,1)
         scaled_window = scaled.reshape(1, self.window_size, self.n_feats)
         
-        normalized_pred = self.model.predict(scaled_window, verbose=0)[0][0]
+        #normalized_pred = self.model.predict(scaled_window, verbose=0)[0][0]
+        normalized_pred = self.model.predict_on_batch(scaled_window)[0][0]
         # Denormalize to obtain the raw log_beta
         raw_log_beta = normalized_pred * self.target_scale + self.target_mean
         # Compute beta by exponentiating the log_beta
@@ -172,7 +173,42 @@ def predict_beta(I_prediction_method, seed_df, beta_prediction_method, predicted
                 pred = 0
             predicted_beta.append(pred)
             predictor.update_buffer([np.log(pred+1e-7)])
-                
+            
+    elif beta_prediction_method == 'lstm2':
+        scaler = joblib.load(f'{model_path}.pkl')
+        model = load_model(f'{model_path}.keras')
+        window_size=4
+        
+        inp = seed_df[['Beta']
+                     ].shift(np.arange(window_size)
+                            ).iloc[predicted_days[0]].values
+        inp = np.log(inp+1e-7)
+        sc_inp = scaler.transform(inp[::-1].reshape(-1, 1))
+        
+        predicted_beta = []
+        sc = sc_inp.reshape(1, window_size, 1)
+        sc = tf.convert_to_tensor(sc)
+        
+        zero = scaler.transform(np.array([np.log(1e-7)]
+                                 ).reshape(-1, 1))
+        for i in range(predicted_days[0], 
+                       seed_df.shape[0]): 
+            pred = model.predict_on_batch(sc)
+
+            # add pred in the beginning: [y_hat, t, t-1, t-2]
+            result = np.empty_like(sc)
+            result[:,:1] = pred
+            result[:,1:] = sc[:,:-1]
+            if pred<zero:
+                pred = tf.convert_to_tensor([[0]])
+            predicted_beta.append(pred)
+
+            sc = result
+            
+        predicted_beta = scaler.inverse_transform(
+            tf.convert_to_tensor(predicted_beta
+                                ).numpy()[::,0])
+        predicted_beta = np.exp(predicted_beta.flatten())             
     return np.array(beggining_beta), np.array(predicted_beta), predicted_I 
 
 

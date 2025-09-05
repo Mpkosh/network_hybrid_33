@@ -10,6 +10,7 @@ from scipy.spatial import ConvexHull
 import seaborn as sns
 
 
+
 def get_mnames():
     clean_mnames = [['Last value',
         'Cumulative Average','Median'], 
@@ -51,7 +52,7 @@ def create_boxplots(folder='', switch='', suff='',
                 df = pd.read_csv(f'results/{folder}/'+switch+\
                                  f'/{method}_results{suff}.csv')
                 if trim:
-                    df = df[df['actual_peak_Inc']>1000]
+                    df = df[df['actual_peak_I']>1000]
                 
                 rmse_df[f"{label}"] = df[metric]
                 print(f'Median RMSE for {label}',
@@ -483,3 +484,5 @@ def smth_hmaps(fin):
     
     plt.tight_layout()
     #plt.savefig(f'results/actual.pdf', format='pdf', bbox_inches='tight')
+    
+    
