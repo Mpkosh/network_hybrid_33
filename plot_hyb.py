@@ -243,91 +243,95 @@ def main_f(I_prediction_method, stochastic, count_stoch_line,
                          ].fillna(0)
         seed_df.replace([np.inf, -np.inf], 0, inplace=True)
         
-        # switch moment
-        pop = seed_df.iloc[0,:4].sum()
-        n_people = pop*perc_switch
-        #if idx==0:
-        #    print(pop, perc_switch, n_people)
-        if switch_on_incidence:
-            switch_col='incidence'
+        
+        if seed_df.shape[0] < window_size+1:
+            pass
         else:
-            switch_col='I'
-        start_day = choice_start_day.choose_method(switch_col,seed_df, 
-                                                   type_start_day,
-                                                   min_day=window_size,
-                                                   frac=perc_switch,
-                                                   n_people=n_people)
-        # ЗА сколько ДО пика
-        if not isinstance(type_start_day, str):
-            start_day = seed_df[switch_col].argmax() - start_day
+            # switch moment
+            pop = seed_df.iloc[0,:4].sum()
+            n_people = pop*perc_switch
+            #if idx==0:
+            #    print(pop, perc_switch, n_people)
+            if switch_on_incidence:
+                switch_col='incidence'
+            else:
+                switch_col='I'
+            start_day = choice_start_day.choose_method(switch_col,seed_df, 
+                                                       type_start_day,
+                                                       min_day=window_size,
+                                                       frac=perc_switch,
+                                                       n_people=n_people)
+            # ЗА сколько ДО пика
+            if not isinstance(type_start_day, str):
+                start_day = seed_df[switch_col].argmax() - start_day
 
-        start_days.append(start_day)
-        # choosing the days for prediction
-        predicted_days = np.arange(start_day, seed_df.shape[0])
-        start_time = time.time()
+            start_days.append(start_day)
+            # choosing the days for prediction
+            predicted_days = np.arange(start_day, seed_df.shape[0])
+            start_time = time.time()
 
-        # prediction of Beta values and calculation of prediction time
-        beggining_beta, predicted_beta, \
-            predicted_I = predict_Beta_I.predict_beta(
-                            I_prediction_method, seed_df,
-                            beta_prediction_method, 
-                            predicted_days, stochastic, 
-                            count_stoch_line, sigma, gamma,
-                            features_reg, model_path, window_size)
-        
-        predicted_Inc = np.zeros((count_stoch_line+1, 
-                                  predicted_days.shape[0]))
-        
-        # use predicted Beta values for predicting I
-        # extract compartment values on the switch day
-        y = seed_df.iloc[predicted_days[0],:4]
-        # predict the Infected compartment trajectory
-        
-        ss,ee,predicted_I[0],\
-            _ = predict_Beta_I.predict_I(I_prediction_method, y,
-                                          predicted_days-start_day,
-                                          predicted_beta,
-                                          sigma, gamma, 'det')
-        # Inc_t = (E_t-1 - E_t) - (S_t - S_t-1)
-        if on_incidence:
+            # prediction of Beta values and calculation of prediction time
+            beggining_beta, predicted_beta, \
+                predicted_I = predict_Beta_I.predict_beta(
+                                I_prediction_method, seed_df,
+                                beta_prediction_method, 
+                                predicted_days, stochastic, 
+                                count_stoch_line, sigma, gamma,
+                                features_reg, model_path, window_size)
+
+            predicted_Inc = np.zeros((count_stoch_line+1, 
+                                      predicted_days.shape[0]))
+
+            # use predicted Beta values for predicting I
+            # extract compartment values on the switch day
+            y = seed_df.iloc[predicted_days[0],:4]
+            # predict the Infected compartment trajectory
+
+            ss,ee,predicted_I[0],\
+                _ = predict_Beta_I.predict_I(I_prediction_method, y,
+                                              predicted_days-start_day,
+                                              predicted_beta,
+                                              sigma, gamma, 'det')
             # Inc_t = (E_t-1 - E_t) - (S_t - S_t-1)
-            from_last = seed_df['incidence'].iloc[predicted_days[0]]
-            predicted_Inc[0] = np.append(from_last, 
-                                       (ee[:-1] - ee[1:]) - \
-                                           (ss[1:] - ss[:-1]))
-            predicted_Inc[0][predicted_Inc[0]<0] = 0
-            
-        if stochastic:
-            for i in range(count_stoch_line):
-                ss,ee,predicted_I[i+1],_ \
-                    = predict_Beta_I.predict_I(I_prediction_method,
-                                               y, predicted_days-start_day, 
-                                               predicted_beta,sigma, gamma, 
-                                               'stoch')
-                if on_incidence:
-                    predicted_Inc[i+1] = np.append(from_last, 
-                                                 (ee[:-1] - ee[1:]) - \
-                                                     (ss[1:] - ss[:-1]))
-                    predicted_Inc[i+1][predicted_Inc[i+1]<0] = 0
+            if on_incidence:
+                # Inc_t = (E_t-1 - E_t) - (S_t - S_t-1)
+                from_last = seed_df['incidence'].iloc[predicted_days[0]]
+                predicted_Inc[0] = np.append(from_last, 
+                                           (ee[:-1] - ee[1:]) - \
+                                               (ss[1:] - ss[:-1]))
+                predicted_Inc[0][predicted_Inc[0]<0] = 0
 
-                    
-        end_time = time.time()
-        execution_time.append(end_time - start_time)
+            if stochastic:
+                for i in range(count_stoch_line):
+                    ss,ee,predicted_I[i+1],_ \
+                        = predict_Beta_I.predict_I(I_prediction_method,
+                                                   y, predicted_days-start_day, 
+                                                   predicted_beta,sigma, gamma, 
+                                                   'stoch')
+                    if on_incidence:
+                        predicted_Inc[i+1] = np.append(from_last, 
+                                                     (ee[:-1] - ee[1:]) - \
+                                                         (ss[1:] - ss[:-1]))
+                        predicted_Inc[i+1][predicted_Inc[i+1]<0] = 0
 
-        if ax is None:
-            # plot graph for seed_number
-            rmse_I, rmse_Inc, rmse_Beta, r2, r2_Inc, \
-                peak = plot_one(axes[idx], chosen_col, predicted_days, 
-                                seed_df, predicted_I, predicted_Inc,
-                                beggining_beta, predicted_beta, 
-                                seed_number, end_time - start_time)  
-            
-            all_rmse_I.append(rmse_I)
-            all_rmse_Inc.append(rmse_Inc)
-            all_rmse_Beta.append(rmse_Beta)
-            all_r2.append(r2)
-            all_r2_Inc.append(r2_Inc)
-            all_peak.append(peak)
+
+            end_time = time.time()
+            execution_time.append(end_time - start_time)
+
+            if ax is None:
+                # plot graph for seed_number
+                rmse_I, rmse_Inc, rmse_Beta, r2, r2_Inc, \
+                    peak = plot_one(axes[idx], chosen_col, predicted_days, 
+                                    seed_df, predicted_I, predicted_Inc,
+                                    beggining_beta, predicted_beta, 
+                                    seed_number, end_time - start_time)  
+
+                all_rmse_I.append(rmse_I)
+                all_rmse_Inc.append(rmse_Inc)
+                all_rmse_Beta.append(rmse_Beta)
+                all_r2.append(r2)
+                all_r2_Inc.append(r2_Inc)
+                all_peak.append(peak)
 
         
     
