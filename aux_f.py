@@ -354,7 +354,7 @@ def metric_hmaps(fin, met, suff='', exclude=[]):
     
 def peaks_hmaps(fin, with_inc=False):
     fontsize = 14
-    fig, axes = plt.subplots(1, 2, figsize=(15, 6))
+    fig, axes = plt.subplots(1, 2, figsize=(14, 6))
     ax=axes.flatten()
 
     cmap = mpl.cm.RdYlGn
@@ -408,7 +408,7 @@ def peaks_hmaps(fin, with_inc=False):
     for i in [-1,-2]:    
         ax_1.figure.axes[i].tick_params(labelsize=fontsize)
         
-    ax_1.figure.axes[-1].set_ylabel('Fraction of infected', size=fontsize)
+    ax_1.figure.axes[-1].set_ylabel('Fraction of new cases', size=fontsize)
     ax_1.figure.axes[-2].set_ylabel('Day', size=fontsize)
     
     plt.tight_layout()
@@ -486,73 +486,3 @@ def smth_hmaps(fin):
     #plt.savefig(f'results/actual.pdf', format='pdf', bbox_inches='tight')
     
     
-def smth_hmaps2(fin, mm='lstm_day_E_previous_I'):
-    fontsize = 14
-    fig, axes = plt.subplots(1, 2, figsize=(15, 6))
-    ax=axes.flatten()
-
-    cmap = mpl.cm.RdYlGn
-    n = ['a)','b)'][::-1]
-
-    #ticks=np.arange(1,22)
-    #boundaries = np.arange(1-.5, 21+1.5 )
-
-    data = fin.pivot(columns='beta', index='alpha', 
-                     values=f'pt_err_Inc.{mm}')
-    ax_1 = sns.heatmap(data.sort_index(level=1, ascending=False), 
-                       cmap=cmap, ax=ax[0], #norm=norm, 
-                       cbar_kws={'extendfrac': .1,
-                                #"ticks":ticks, "boundaries":boundaries
-                                },
-                       #vmax=14,
-                       center=0.,
-                      xticklabels = 10, yticklabels=10,
-                      linewidths=0.0, rasterized=True,)
-    ax_1.set_title('pt error', fontsize=1.2*fontsize)
-
-    colorbar = ax_1.collections[0].colorbar
-    '''
-    tick_locs = np.linspace(bounds[0], bounds[-1], 
-                            2 * len(bounds) + 1)[1::2]
-    colorbar.set_ticks(np.mean([bounds[1:], bounds[:-1]], 0))
-    colorbar.set_ticklabels([f'[1, {bounds[1]})', 
-                             f'[{bounds[1]}, {bounds[2]-1})',
-                             f'[{bounds[2]}, 150)'])
-    '''
-    data = fin.pivot(columns='beta', index='alpha', 
-                     values=f'ph_err_Inc.{mm}')
-    ax_2 = sns.heatmap(data.sort_index(level=1, ascending=False), 
-                       cmap=cmap, ax=ax[1], #norm=norm, 
-                       cbar_kws={'extendfrac': .1},
-                       #vmax=14,
-                       center=1.,
-                      xticklabels = 10, yticklabels=10,
-                      linewidths=0.0, rasterized=True,)
-    ax_2.set_title('ph error', fontsize=1.2*fontsize)
-
-    colorbar = ax_2.collections[0].colorbar
-    '''
-    tick_locs = np.linspace(bounds[0], bounds[-1], 
-                            2 * len(bounds) + 1)[1::2]
-    colorbar.set_ticks(np.mean([bounds[1:], bounds[:-1]], 0))
-    
-    colorbar.set_ticklabels([r'(0, 1%)', 
-                             r'[1%, 5%)', 
-                             f'[5%, 10%)', 
-                             '[10%, 100%)'])
-    '''
-    
-    for ax_i in [ax_1, ax_2]:
-        ax_i.text(-0.1, 1.1, n.pop(),
-                  transform=ax_i.transAxes, size=1.5*fontsize)
-        ax_i.collections[0].cmap.set_bad('0.7')
-        ax_i.set_xlabel(r'$\beta$', fontsize=1.2*fontsize)
-        ax_i.set_ylabel(r'$\alpha$', fontsize=1.2*fontsize)
-        ax_i.tick_params(axis='both', which='major', labelsize=fontsize)
-    for i in [-1,-2]:    
-        ax_1.figure.axes[i].tick_params(labelsize=fontsize)
-        
-    ax_1.figure.axes[-1].set_ylabel('Day', size=fontsize)
-    ax_1.figure.axes[-2].set_ylabel('Day', size=fontsize)
-    
-    plt.tight_layout()    
