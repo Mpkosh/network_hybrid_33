@@ -242,10 +242,11 @@ def df_metrics(folder_name, test_suff='', switch='',
     fin_m = ['r2','rmse_I','rmse_Beta',
              'pt_err', 'ph_err','time_predict']
     if with_inc:
-        fin_m = ['r2','r2_Inc','rmse_I','rmse_Inc',
-                            'rmse_Beta', 'pt_err', 'ph_err',
-                            'pt_err_Inc','ph_err_Inc',
-                            'time_predict']
+        fin_m = ['r2','r2_Inc','r2_full','r2_Inc_full',
+                 'rmse_I','rmse_Inc',
+                'rmse_Beta', 'pt_err', 'ph_err',
+                'pt_err_Inc','ph_err_Inc',
+                'time_predict']
         
     for label in methods:
         try:
@@ -333,7 +334,7 @@ def metric_hmaps(fin, met, suff='', exclude=[]):
                             #cbar_kws={'label': nice_label}
                            )
                 ax_i.collections[0].cmap.set_bad('0.7')
-                ax_i.set_xlabel(r'$\beta$')
+                ax_i.set_xlabel(r'$\beta_n$')
                 ax_i.set_ylabel(r'$\alpha$')
 
                 ax_i.set_title(label)
@@ -473,7 +474,7 @@ def smth_hmaps(fin):
         ax_i.text(-0.1, 1.1, n.pop(),
                   transform=ax_i.transAxes, size=1.5*fontsize)
         ax_i.collections[0].cmap.set_bad('0.7')
-        ax_i.set_xlabel(r'$\beta$', fontsize=1.2*fontsize)
+        ax_i.set_xlabel(r'$\beta_n$', fontsize=1.2*fontsize)
         ax_i.set_ylabel(r'$\alpha$', fontsize=1.2*fontsize)
         ax_i.tick_params(axis='both', which='major', labelsize=fontsize)
     for i in [-1,-2]:    
