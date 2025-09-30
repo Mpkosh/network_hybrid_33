@@ -39,7 +39,7 @@ def create_boxplots(folder='', switch='', suff='',
     max_list = []
     
     if with_inc:
-        metric = 'rmse_Inc'
+        metric = 'r2_Inc_full'#'rmse_Inc'
     else:
         metric = 'rmse_I'
         
@@ -55,8 +55,9 @@ def create_boxplots(folder='', switch='', suff='',
                     df = df[df['actual_peak_I']>1000]
                 
                 rmse_df[f"{label}"] = df[metric]
-                print(f'Median RMSE for {label}',
-                      df[metric].median())
+                print(f'Mean RMSE for {label}',
+                      df[metric].mean().round(2), '+-',
+                     df[metric].std().round(2))
             
             except FileNotFoundError:
                 rmse_df[f"{label}"
@@ -353,13 +354,15 @@ def metric_hmaps(fin, met, suff='', exclude=[]):
                 bbox_inches='tight')
     
     
-def peaks_hmaps(fin, with_inc=False):
+def peaks_hmaps(fin, ax=[], n=['a)','b)'], 
+                with_inc=False, title=''):
     fontsize = 14
-    fig, axes = plt.subplots(1, 2, figsize=(14, 6))
-    ax=axes.flatten()
-
+    if len(ax)==0:
+        fig, axes = plt.subplots(1, 2, figsize=(14, 6))
+        ax=axes.flatten()
+    
     cmap = mpl.cm.RdYlGn
-    n = ['a)','b)'][::-1]
+    n = n[::-1]
     
     if with_inc:
         suff = '_Inc'
@@ -374,10 +377,11 @@ def peaks_hmaps(fin, with_inc=False):
     ax_1 = sns.heatmap(data.sort_index(level=1, ascending=False), 
                        cmap=cmap, ax=ax[0], #norm=norm, 
                        cbar_kws={'extendfrac': .1},
-                       vmax=40,
+                       #vmax=70,
                       xticklabels = 10, yticklabels=10,
                       linewidths=0.0, rasterized=True,)
-    ax_1.set_title('Peak time', fontsize=1.2*fontsize)
+    ax_1.set_title('Peak time'+title, 
+                   fontsize=1.2*fontsize)
     '''
     colorbar = ax_1.collections[0].colorbar
     tick_locs = np.linspace(bounds[0], bounds[-1], 
@@ -396,14 +400,15 @@ def peaks_hmaps(fin, with_inc=False):
                        cbar_kws={'extendfrac': .1},
                       xticklabels = 10, yticklabels=10,
                       linewidths=0.0, rasterized=True,)
-    ax_2.set_title('Peak height', fontsize=1.2*fontsize)
+    ax_2.set_title('Peak height'+title,
+                   fontsize=1.2*fontsize)
 
     
     for ax_i in [ax_1, ax_2]:
         ax_i.text(-0.1, 1.1, n.pop(),
                   transform=ax_i.transAxes, size=1.5*fontsize)
         ax_i.collections[0].cmap.set_bad('0.7')
-        ax_i.set_xlabel(r'$\beta$', fontsize=1.2*fontsize)
+        ax_i.set_xlabel(r'$\beta_n$', fontsize=1.2*fontsize)
         ax_i.set_ylabel(r'$\alpha$', fontsize=1.2*fontsize)
         ax_i.tick_params(axis='both', which='major', labelsize=fontsize)
     for i in [-1,-2]:    
