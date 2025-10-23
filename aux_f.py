@@ -39,7 +39,7 @@ def create_boxplots(folder='', switch='', suff='',
     max_list = []
     
     if with_inc:
-        metric = 'r2_Inc_full'#'rmse_Inc'
+        metric = 'rmse_Inc'
     else:
         metric = 'rmse_I'
         

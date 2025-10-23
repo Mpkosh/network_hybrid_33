@@ -86,7 +86,7 @@ def plot_one(ax, chosen_col,
     actual_Inc = seed_df.iloc[predicted_days[0]:]['incidence'].values
     rmse_Inc = rmse(np.nan_to_num(actual_Inc, neginf=0, posinf=0).astype(int),
                  predicted_Inc[0])
-    
+    print(rmse_Inc)
     #calc R^2
     r2 = r2_score(np.nan_to_num(actual_I, neginf=0, posinf=0).astype(int),
               np.nan_to_num(predicted_I[0], neginf=0, posinf=0))
@@ -112,7 +112,7 @@ def plot_one(ax, chosen_col,
     
     
     # display switch 
-    ax.axvline(predicted_days[0], color='red',ls=':')
+    #ax.axvline(predicted_days[0], color='red',ls=':')
 
     if chosen_col=='incidence':
         to_plot = predicted_Inc
@@ -151,7 +151,7 @@ def plot_one(ax, chosen_col,
                         fmt='o', color='black', capsize=2, markersize=2, elinewidth=1, 
                         alpha=0.6, label='$\mu \pm 3\sigma$' if day == 0 else '')
         '''               
-
+    
     # display actual and predicted Infected values
     ax.plot(seed_df.index, seed_df[chosen_col].values , color='tab:blue', 
             label=f'IBM {chosen_col}')
@@ -236,6 +236,7 @@ def main_f(I_prediction_method, count_stoch_line,
         row_n = len(seed_numbers)//2+math.ceil(len(seed_numbers)%2)
         fig, axes = plt.subplots(row_n, 2, figsize=(10, row_n*3), squeeze=False)
         axes = axes.flatten()
+        #axes = np.arange(len(seed_numbers))
     else:
         row_n=0
         axes = ax
@@ -384,9 +385,10 @@ def main_f(I_prediction_method, count_stoch_line,
         plt.tight_layout()
         plt.show()
     else:
-        plt.close(fig)
+        
     '''
-
+    plt.tight_layout()
+    #plt.close(fig)
     return all_rmse_I, all_rmse_Inc, all_rmse_Beta, \
                 all_r2, all_r2_Inc, all_r2_full, all_r2_Inc_full, all_peak, \
                 execution_time, start_days
