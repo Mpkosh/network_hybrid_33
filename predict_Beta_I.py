@@ -19,6 +19,20 @@ def load_saved_model(model_path):
         raise FileNotFoundError(f"Model file not found at {model_path}")
     return joblib.load(model_path)
 
+def decay(t, b0, q, phi):
+    #return [b0*np.exp(-q*tt) for tt in t]
+    return [b0*((1-phi)*np.exp(-q*tt)+phi) for tt in t]
+
+
+def combinedFunction(tdata, b0, q, phi, n=9):
+    # single data reference passed in, extract separate data
+    res = []
+    
+    for i in range(n):
+        #print(b0[i])
+        result = decay(tdata, b0[i], q, phi)
+        res.append(result)
+    return np.array(res).ravel()
 
 class LSTMPredictor:
     """
@@ -71,9 +85,10 @@ class LSTMPredictor:
         return predicted_beta
 
     
-def predict_beta(I_prediction_method, seed_df, beta_prediction_method, predicted_days, 
-                 stochastic, count_stoch_line, sigma, gamma, 
-                 features_reg='', model_path='', window_size=14):
+def predict_beta(I_prediction_method, seed_df, beta_prediction_method,
+                 predicted_days, stochastic, count_stoch_line, 
+                 sigma, gamma, features_reg='', model_path='', 
+                 window_size=14, seed_name=''):
     
     '''
     Predict Beta values.
@@ -90,7 +105,8 @@ def predict_beta(I_prediction_method, seed_df, beta_prediction_method, predicted
     - sigma -- parameter of the SEIR-type mathematical model
     - gamma -- parameter of the SEIR-type mathematical model
     '''
-    predicted_I = np.zeros((count_stoch_line+1, predicted_days.shape[0]))
+    predicted_I = np.zeros((count_stoch_line+1, 
+                            predicted_days.shape[0]))
     beggining_beta = []
 
     
@@ -128,6 +144,37 @@ def predict_beta(I_prediction_method, seed_df, beta_prediction_method, predicted
                 pred[0] = np.log(1e-7)
             predicted_beta.append(np.exp(pred[0]))
             input_b = np.array([*pred,*input_b.flatten()[:-1]]).reshape(1, -1)
+    
+    
+    elif beta_prediction_method == 'expdecay':
+        switch = predicted_days[0]
+        b0 = seed_df.iloc[switch]['Beta'] 
+        fin = seed_df.shape[0]
+        n = 9
+        seed_params = seed_name[:-5]
+        all_df2 = []
+        
+        for i in range(1, n+1):
+            d = pd.read_csv(f'{seed_params}{i}.csv').iloc[:fin,:]
+            all_df2.append(d)
+            d.replace([np.inf, -np.inf], 0, inplace=True)
+           
+        tdata = np.concatenate([np.arange(switch,
+                                          fin)-switch for i in range(n)
+                               ])
+        comboData = np.array([all_df2[i].Beta.iloc[switch:
+                                                  ].values for i in range(n)
+                             ])
+        # curve fit the combined data to the combined function
+        coeffs, _ = curve_fit(lambda t, q, 
+                              phi:combinedFunction(np.arange(switch,
+                                                             fin)-switch, 
+                                                   comboData[:,0], 
+                                                   q, phi), 
+                              tdata, comboData.ravel(),
+                             maxfev = 5000)
+        #print('coeffs for q and phi: ',coeffs)
+        predicted_beta = decay( np.arange(switch,fin)-switch, b0, *coeffs)
     
     
     elif beta_prediction_method == 'arimax':
@@ -174,6 +221,7 @@ def predict_beta(I_prediction_method, seed_df, beta_prediction_method, predicted
             predicted_beta.append(pred)
             predictor.update_buffer([np.log(pred+1e-7)])
             
+    
     elif beta_prediction_method == 'lstm2':
         scaler = joblib.load(f'{model_path}.pkl')
         model = load_model(f'{model_path}.keras')

@@ -86,7 +86,7 @@ def plot_one(ax, chosen_col,
     actual_Inc = seed_df.iloc[predicted_days[0]:]['incidence'].values
     rmse_Inc = rmse(np.nan_to_num(actual_Inc, neginf=0, posinf=0).astype(int),
                  predicted_Inc[0])
-    print(rmse_Inc)
+    #print(rmse_Inc)
     #calc R^2
     r2 = r2_score(np.nan_to_num(actual_I, neginf=0, posinf=0).astype(int),
               np.nan_to_num(predicted_I[0], neginf=0, posinf=0))
@@ -112,7 +112,7 @@ def plot_one(ax, chosen_col,
     
     
     # display switch 
-    #ax.axvline(predicted_days[0], color='red',ls=':')
+    ax.axvline(predicted_days[0], color='red',ls=':')
 
     if chosen_col=='incidence':
         to_plot = predicted_Inc
@@ -309,6 +309,7 @@ def main_f(I_prediction_method, count_stoch_line,
         
         if count_stoch_line>0:
             stochastic=True
+
         # prediction of Beta values and calculation of prediction time
         beggining_beta, predicted_beta, \
             predicted_I = predict_Beta_I.predict_beta(
@@ -316,7 +317,8 @@ def main_f(I_prediction_method, count_stoch_line,
                             beta_prediction_method, 
                             predicted_days, stochastic, 
                             count_stoch_line, sigma, gamma,
-                            features_reg, model_path, window_size)
+                            features_reg, model_path, window_size,
+                            seed_dirs+seed_number[0])
         
         predicted_Inc = np.zeros((count_stoch_line+1, 
                                   predicted_days.shape[0]))

@@ -13,12 +13,14 @@ import seaborn as sns
 
 def get_mnames():
     clean_mnames = [['Last value',
-        'Cumulative Average','Median'], 
+        'Cumulative Average','Median', 
+                    'Exponential Decay'], 
         ['Regression',    
         'LSTM'
         ]]
     methods = [['last_value',
-        'expanding_mean_last_value','median_beta'
+        'expanding_mean_last_value','median_beta', 
+                'expdecay'
                   ], 
         ['regression_beta',       
         'lstm_day_E_previous_I'
@@ -232,7 +234,8 @@ def df_metrics(folder_name, test_suff='', switch='',
               with_inc=False, trim=False, suff=''):
     methods = ['last_value',
                 'expanding_mean_last_value','median_beta', 
-                'regression_beta','lstm_day_E_previous_I'
+                'regression_beta','lstm_day_E_previous_I',
+               'expdecay'
               ]
 
     sw = pd.read_csv(f'{test_suff}test_files.csv').values[::10]
@@ -298,7 +301,7 @@ def metric_hmaps(fin, met, suff='', exclude=[]):
     clean_mnames, methods = get_mnames()
     fig = plt.figure(figsize=(15,10))
     gs = gridspec.GridSpec(5, 3) 
-    n = ['a)','b)','c)','d)','e)'][::-1]
+    n = ['a)','b)','c)','d)','e)','f)'][::-1]
     
     nice_label = ''
     if 'r2' in met:
@@ -312,10 +315,11 @@ def metric_hmaps(fin, met, suff='', exclude=[]):
                                                        new_colors)
     
     #rows = [0,2,0,2,1][::-1]
-    rows = [0,0,2,2,1][::-1]
+    #rows = [0,0,2,2,1][::-1]
+    rows = [0,0,0,2,2,2][::-1]
     #cols = [0,0,1,1,2][::-1]
-    cols = [0,1,0,1,2][::-1]
-    
+    #cols = [0,1,0,1,2][::-1]
+    cols = [0,1,2,0,1,2][::-1]
     
     for method, label in zip(flatten(methods),
                              flatten(clean_mnames)):
@@ -349,7 +353,7 @@ def metric_hmaps(fin, met, suff='', exclude=[]):
         
     
     
-    plt.tight_layout()
+    plt.tight_layout(w_pad = -.5, h_pad=-.5 )
     plt.savefig(f'results/hmap{suff}.pdf', format='pdf', 
                 bbox_inches='tight')
     
