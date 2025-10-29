@@ -389,8 +389,10 @@ def main_f(I_prediction_method, count_stoch_line,
     else:
         
     '''
-    plt.tight_layout()
-    #plt.close(fig)
+    if show_fig_flag:
+        plt.tight_layout()
+    else:
+        plt.close(fig)
     return all_rmse_I, all_rmse_Inc, all_rmse_Beta, \
                 all_r2, all_r2_Inc, all_r2_full, all_r2_Inc_full, all_peak, \
                 execution_time, start_days

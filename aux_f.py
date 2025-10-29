@@ -273,6 +273,7 @@ def df_metrics(folder_name, test_suff='', switch='',
             for met in fin_m:
                 fin[f'{met}.{label}'] = df[met]
         except FileNotFoundError:
+            #print(f'results/{folder_name}/{switch}/'+\f'{label}_results{suff}.csv')
             pass    
     fin['switch'] = df[switch]      
     fin['days_before_peak'] = df['actual_peak_day']-df[switch]      
@@ -297,9 +298,10 @@ def nonlinear_norm(x):
     return x**4
 
 
-def metric_hmaps(fin, met, suff='', exclude=[]):
+def metric_hmaps(fin, met, suff='', exclude=[], figsize=(15,10),
+                size=15):
     clean_mnames, methods = get_mnames()
-    fig = plt.figure(figsize=(15,10))
+    fig = plt.figure(figsize=figsize)
     gs = gridspec.GridSpec(5, 3) 
     n = ['a)','b)','c)','d)','e)','f)'][::-1]
     
@@ -314,12 +316,11 @@ def metric_hmaps(fin, met, suff='', exclude=[]):
     nonlinear_cmap = LinearSegmentedColormap.from_list('nonlinear_plasma', 
                                                        new_colors)
     
-    #rows = [0,2,0,2,1][::-1]
-    #rows = [0,0,2,2,1][::-1]
-    rows = [0,0,0,2,2,2][::-1]
-    #cols = [0,0,1,1,2][::-1]
-    #cols = [0,1,0,1,2][::-1]
-    cols = [0,1,2,0,1,2][::-1]
+
+    rows = [0,0,2,2,1][::-1]
+    #rows = [0,0,0,2,2,2][::-1]
+    cols = [0,1,0,1,2][::-1]
+    #cols = [0,1,2,0,1,2][::-1]
     
     for method, label in zip(flatten(methods),
                              flatten(clean_mnames)):
@@ -334,7 +335,8 @@ def metric_hmaps(fin, met, suff='', exclude=[]):
                                             ascending=False), 
                             vmin=0, vmax=1,cmap=nonlinear_cmap,
                             ax=ax_i,
-                            yticklabels = 10, xticklabels=10,
+                            yticklabels = int(size*2/3), 
+                            xticklabels=int(size*2/3),
                             linewidths=0.0, rasterized=True,
                             #cbar_kws={'label': nice_label}
                            )
@@ -342,9 +344,9 @@ def metric_hmaps(fin, met, suff='', exclude=[]):
                 ax_i.set_xlabel(r'$\beta_n$')
                 ax_i.set_ylabel(r'$\alpha$')
 
-                ax_i.set_title(label)
+                ax_i.set_title(label, size=size)
                 ax_i.text(-0.1, 1.1, n.pop(),
-                          transform=ax_i.transAxes, size=15)
+                          transform=ax_i.transAxes, size=size)
                 cbar = ax_i.collections[0].colorbar
                 cbar.set_label(nice_label, rotation=0)
 
