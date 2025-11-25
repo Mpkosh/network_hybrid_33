@@ -254,13 +254,16 @@ def main_f(I_prediction_method, count_stoch_line,
     all_peak = []
     start_days = []
     execution_time = []
-    
-    
+        
     for idx, seed_number in enumerate(seed_numbers):
-        #print(seed_number)
+        
         # read the DataFrame of the seed: S,[E],I,R,Beta
         if is_filename:
+            _, beta, gc,dc, initi, alpha, _, seed = seed_number[0].split('_')
+            filen = f'p_{round(float(beta), 2)}_{gc}_{dc}_{initi}_{round(float(alpha), 2)}_seed_{seed}' 
+            #seed_df = pd.read_csv(seed_dirs+filen)
             seed_df = pd.read_csv(seed_dirs+seed_number[0])
+            #print(seed_dirs+seed_number[0])
             window_size = 4
         else:
             seed_df = pd.read_csv(seed_dirs+f'seir_seed_{seed_number}.csv')
