@@ -208,7 +208,7 @@ def main_f(I_prediction_method, count_stoch_line,
            show_fig_flag, seed_dirs='test/', sigma=0.1, gamma=0.08,
            ax = None, model_path='', perc_switch=0.01,
           is_filename=False, on_incidence=False,
-          switch_on_incidence=False):
+          switch_on_incidence=False,detailed=False):
     '''
     Main function
     
@@ -245,7 +245,7 @@ def main_f(I_prediction_method, count_stoch_line,
         stochastic = True
     else:
         stochastic = False
-    print(beta_prediction_method)
+    #print(beta_prediction_method)
     # list of RMSE Beta and I for each seed 
     all_rmse_I, all_rmse_Inc = [], []
     all_rmse_Beta = []
@@ -254,7 +254,8 @@ def main_f(I_prediction_method, count_stoch_line,
     all_peak = []
     start_days = []
     execution_time = []
-        
+    df_on_switch = []
+    
     for idx, seed_number in enumerate(seed_numbers):
         
         # read the DataFrame of the seed: S,[E],I,R,Beta
@@ -283,13 +284,14 @@ def main_f(I_prediction_method, count_stoch_line,
         else:    
             seed_df['incidence'] = 0
         #seed_df = seed_df[(seed_df['E'] > 0)|(seed_df['I'] > 0)].fillna(0)
-                          
+              
         seed_df = seed_df.iloc[:100].fillna(0)
         seed_df.replace([np.inf, -np.inf], 0, inplace=True)
         
         # switch moment
         pop = seed_df.iloc[0,:4].sum()
         n_people = pop*perc_switch
+   
         #if idx==0:
         #    print(pop, perc_switch, n_people)
         if switch_on_incidence:
@@ -301,10 +303,11 @@ def main_f(I_prediction_method, count_stoch_line,
                                                    min_day=window_size,
                                                    frac=perc_switch,
                                                    n_people=n_people)
+        '''
         # ЗА сколько ДО пика
         if not isinstance(type_start_day, str):
             start_day = seed_df[switch_col].argmax() - start_day
-
+        '''
         start_days.append(start_day)
         # choosing the days for prediction
         predicted_days = np.arange(start_day, seed_df.shape[0])
@@ -358,7 +361,7 @@ def main_f(I_prediction_method, count_stoch_line,
                                                      (ss[1:] - ss[:-1]))
                     predicted_Inc[i+1][predicted_Inc[i+1]<0] = 0
 
-                    
+                
         end_time = time.time()
         execution_time.append(end_time - start_time)
 
@@ -370,7 +373,7 @@ def main_f(I_prediction_method, count_stoch_line,
                             seed_df, predicted_I, predicted_Inc,
                             beggining_beta, predicted_beta, 
                             seed_number, end_time - start_time)  
-
+   
         all_rmse_I.append(rmse_I)
         all_rmse_Inc.append(rmse_Inc)
         all_rmse_Beta.append(rmse_Beta)
@@ -380,8 +383,10 @@ def main_f(I_prediction_method, count_stoch_line,
         all_r2_Inc_full.append(r2_Inc_full)
         all_peak.append(peak)
 
+        one_on_switch = seed_df.iloc[start_day].values
+        df_on_switch.append(one_on_switch)
         
-    
+    #print(seed_df.iloc[start_day])
     #if ax is None:
 
     # show the plots
@@ -395,10 +400,17 @@ def main_f(I_prediction_method, count_stoch_line,
     if show_fig_flag:
         plt.tight_layout()
     else:
-        plt.close(fig)
-    return all_rmse_I, all_rmse_Inc, all_rmse_Beta, \
+        plt.close()
+        
+    if detailed:
+        return all_rmse_I, all_rmse_Inc, all_rmse_Beta, \
                 all_r2, all_r2_Inc, all_r2_full, all_r2_Inc_full, all_peak, \
-                execution_time, start_days
+                execution_time, start_days, df_on_switch
+    else:
+        return all_rmse_I, all_rmse_Inc, all_rmse_Beta, \
+                    all_r2, all_r2_Inc, all_r2_full, all_r2_Inc_full, all_peak, \
+                    execution_time, start_days
+    
     '''else:
         return plot_one(axes, predicted_days, seed_df, 
                predicted_I, beggining_beta, predicted_beta, 

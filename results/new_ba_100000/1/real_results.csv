@@ -1,0 +1,2 @@
+rmse_I,rmse_Inc,rmse_Beta,r2,r2_Inc,r2_full,r2_Inc_full,time_predict,1,actual_peak_I,predicted_peak_I,actual_peak_Inc,predicted_peak_inc,actual_peak_day,predicted_peak_day,actual_peak_day_Inc,predicted_peak_day_inc
+300.85254282663544,92.47909946784645,0.0,0.9969147575298889,0.994043604892002,0.9969306285012817,0.9940686711464723,0.0,1,16615,17568.0,3978.0,4022.0,25,23,19,20

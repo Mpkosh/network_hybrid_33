@@ -2,11 +2,11 @@ import pandas as pd
 import numpy as np
 import os
 import joblib
-from tensorflow.keras.models import load_model
+#from tensorflow.keras.models import load_model
 from sklearn.preprocessing import StandardScaler
 from scipy.optimize import curve_fit
 #from statsmodels.tsa.statespace.sarimax import SARIMAXResults
-import tensorflow as tf
+#import tensorflow as tf
 # our functions
 import seir_discrete 
 
@@ -88,7 +88,7 @@ class LSTMPredictor:
 def predict_beta(I_prediction_method, seed_df, beta_prediction_method,
                  predicted_days, stochastic, count_stoch_line, 
                  sigma, gamma, features_reg='', model_path='', 
-                 window_size=14, seed_name=''):
+                 window_size=4, seed_name=''):
     
     '''
     Predict Beta values.
@@ -114,7 +114,10 @@ def predict_beta(I_prediction_method, seed_df, beta_prediction_method,
         predicted_beta = [seed_df.iloc[predicted_days[0]]['Beta'] 
                           for i in range(predicted_days.shape[0])]
 
-    
+    elif beta_prediction_method == 'real':
+        predicted_beta = [seed_df.iloc[predicted_days[i]]['Beta'] 
+                          for i in range(predicted_days.shape[0])]
+        
     elif beta_prediction_method == 'expanding mean last value':
         beggining_beta = seed_df.Beta.iloc[:predicted_days[0]+1
                                           ].expanding(1).mean()

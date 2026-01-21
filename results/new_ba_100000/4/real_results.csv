@@ -1,0 +1,2 @@
+type_start_day,rmse_I,rmse_Inc,rmse_Beta,r2,r2_Inc,r2_full,r2_Inc_full,time_predict,actual_peak_I,predicted_peak_I,actual_peak_Inc,predicted_peak_inc,actual_peak_day,predicted_peak_day,actual_peak_day_Inc,predicted_peak_day_inc
+4,351.9856028068951,76.2293687935737,0.0,0.9958500679842761,0.9960524240644845,0.9959259353028557,0.9960920814348145,0.0020160675048828125,16615,17760.0,3978.0,4075.0,25,23,19,19
