@@ -23,7 +23,8 @@ def plot_one(ax, chosen_col,
              predicted_days, seed_df, predicted_I, 
              predicted_Inc,
              beggining_beta, predicted_beta,
-             seed_number, execution_time):
+             seed_number, execution_time,
+            show_fig_flag=True):
     '''
     Plotting the graph for a seed.
     
@@ -41,7 +42,8 @@ def plot_one(ax, chosen_col,
     - lower_bound -- upper boundary of the interval (3 std of predicted_I on a specific day)
     - upper_bound -- lower boundary of the interval (3 std of predicted_I on a specific day)
     '''
-    size = 100
+    #size = 100
+    size = seed_df.shape[0]
     # when shifting forecasts, sometimes NaN values appear here
     #predicted_Inc[np.isnan(predicted_Inc)] = 0.0  
     predicted_Inc[0] = np.nan_to_num(predicted_Inc[0], neginf=0, posinf=0
@@ -110,95 +112,96 @@ def plot_one(ax, chosen_col,
     r2_Inc_full = r2_score(actual_Inc_full,
                            predicted_Inc_full)
     
-    
-    # display switch 
-    ax.axvline(predicted_days[0], color='red',ls=':')
+    if show_fig_flag:
+        # display switch 
+        ax.axvline(predicted_days[0], color='red',ls=':')
 
     if chosen_col=='incidence':
         to_plot = predicted_Inc
     else:
         to_plot = predicted_I
-        
-    if to_plot.shape[0] > 1:
-        # display trajectories of the stochastic model
-        '''
-        for i in range(to_plot.shape[0]-1):
-            ax.plot(predicted_days, to_plot[i+1], color='tab:orange', ls='--', 
-                    alpha=0.3, label=f'Predicted {chosen_col} (stoch.)' if i == 0 else '')
-        '''
-        # "interval" from min to max    
-        ax.fill_between(x = predicted_days, 
-                        y1=np.min(to_plot, axis=0),
-                        y2=np.max(to_plot, axis=0),
-                       color='red', alpha=0.2,
-                       #label='Predicted inc. interval'
-                       )    
-        '''
-        # median calculation
-        mean_values = np.mean(to_plot, axis=0) 
-        # standard error
-        std_dev = np.std(to_plot, axis=0)
-        # boundaries: mean ± 3σ (checked for negative values)
-        lower_bound = mean_values - 3 * std_dev
-        upper_bound = mean_values + 3 * std_dev
-        lower_bound = np.maximum(lower_bound, 0)
-        
-        # add vertical lines with tick marks for confidence intervals
-        for day in range(0, len(predicted_days), 5): 
-            ax.errorbar(predicted_days[day], mean_values[day],
-                        yerr=[[mean_values[day] - lower_bound[day]], 
-                            [upper_bound[day] - mean_values[day]]], 
-                        fmt='o', color='black', capsize=2, markersize=2, elinewidth=1, 
-                        alpha=0.6, label='$\mu \pm 3\sigma$' if day == 0 else '')
-        '''               
     
-    # display actual and predicted Infected values
-    ax.plot(seed_df.index, seed_df[chosen_col].values , color='tab:blue', 
-            label=f'IBM {chosen_col}')
-    ax.plot(predicted_days, to_plot[0],color='red', ls='-', 
-              alpha=0.9,
-            label=f'SEIR {chosen_col} ($R^2$ = {r2_Inc:.3f})')
-    
-    # add axis labels
-    ax.set_xlabel('Time, days')
-    ax.set_ylabel(f'Incidence, cases')
-    ax.grid(True, alpha=0.3)
-        
-    ax_b = ax.twinx()
-    # display actual and predicted Beta values
-    ax_b.plot(seed_df.index, seed_df['Beta'],  color='gray', ls='--', 
-              alpha=0.4, label=r'$\beta_c$')
+    if show_fig_flag:
+        if to_plot.shape[0] > 1:
+            # display trajectories of the stochastic model
+            '''
+            for i in range(to_plot.shape[0]-1):
+                ax.plot(predicted_days, to_plot[i+1], color='tab:orange', ls='--', 
+                        alpha=0.3, label=f'Predicted {chosen_col} (stoch.)' if i == 0 else '')
+            '''
+            # "interval" from min to max    
+            ax.fill_between(x = predicted_days, 
+                            y1=np.min(to_plot, axis=0),
+                            y2=np.max(to_plot, axis=0),
+                           color='red', alpha=0.2,
+                           #label='Predicted inc. interval'
+                           )    
+            '''
+            # median calculation
+            mean_values = np.mean(to_plot, axis=0) 
+            # standard error
+            std_dev = np.std(to_plot, axis=0)
+            # boundaries: mean ± 3σ (checked for negative values)
+            lower_bound = mean_values - 3 * std_dev
+            upper_bound = mean_values + 3 * std_dev
+            lower_bound = np.maximum(lower_bound, 0)
 
-    if len(beggining_beta) > 0:
-        given_days = np.arange(predicted_days[0]+1)
-        ax_b.plot(given_days, beggining_beta,color='green', ls='--', 
-                  alpha=0.7)
-    ax_b.plot(predicted_days, predicted_beta,color='green', ls='--', 
-              alpha=0.7, label=r'Estimated $\beta_c$')
-    ax_b.set_ylabel(r'$\beta_c$')
+            # add vertical lines with tick marks for confidence intervals
+            for day in range(0, len(predicted_days), 5): 
+                ax.errorbar(predicted_days[day], mean_values[day],
+                            yerr=[[mean_values[day] - lower_bound[day]], 
+                                [upper_bound[day] - mean_values[day]]], 
+                            fmt='o', color='black', capsize=2, markersize=2, elinewidth=1, 
+                            alpha=0.6, label='$\mu \pm 3\sigma$' if day == 0 else '')
+            '''               
 
-    ax_b.set_ylim(0, np.max(actual_Beta[:100])*1.1)
-    
-    # add legend and titles
-    lines1, labels1 = ax.get_legend_handles_labels()
-    lines2, labels2 = ax_b.get_legend_handles_labels()
-    ax.legend(lines1 + lines2, labels1 + labels2, 
-              loc='upper right')
-    ax.set_zorder(1) # make it on top
-    ax.set_frame_on(False) # make it transparent
-    '''
-    ax.set_title(f'Switch day {predicted_days[0]}\n'+
-                 f'Peak I (act.):{actual_peak_I:.2f}, '+
-                 f'Peak I (pred.):{predicted_peak_I:.2f}, \n'+
-                 f'Peak Inc (act.):{actual_peak_Inc:.2f}, '+
-                 f'Peak Inc (pred.):{predicted_peak_Inc:.2f}, \n'+
-                 f'R2 I:{r2:.2f} '+
-                 f'R2 Inc:{r2_Inc:.2f} \n'+
-                 f'RMSE Beta:{rmse_Beta:.7f}',
-                 fontsize=10)
-   
-    plt.savefig(f'results/ba100_example{predicted_beta[0]}.pdf', format='pdf', 
-                bbox_inches='tight') 
+        # display actual and predicted Infected values
+        ax.plot(seed_df.index, seed_df[chosen_col].values , color='tab:blue', 
+                label=f'IBM {chosen_col}')
+        ax.plot(predicted_days, to_plot[0],color='red', ls='-', 
+                  alpha=0.9,
+                label=f'SEIR {chosen_col} ($R^2$ = {r2_Inc:.3f})')
+
+        # add axis labels
+        ax.set_xlabel('Time, days')
+        ax.set_ylabel(f'Incidence, cases')
+        ax.grid(True, alpha=0.3)
+
+        ax_b = ax.twinx()
+        # display actual and predicted Beta values
+        ax_b.plot(seed_df.index, seed_df['Beta'],  color='gray', ls='--', 
+                  alpha=0.4, label=r'$\beta_c$')
+
+        if len(beggining_beta) > 0:
+            given_days = np.arange(predicted_days[0]+1)
+            ax_b.plot(given_days, beggining_beta,color='green', ls='--', 
+                      alpha=0.7)
+        ax_b.plot(predicted_days, predicted_beta,color='green', ls='--', 
+                  alpha=0.7, label=r'Estimated $\beta_c$')
+        ax_b.set_ylabel(r'$\beta_c$')
+
+        ax_b.set_ylim(0, np.max(actual_Beta[:100])*1.1)
+
+        # add legend and titles
+        lines1, labels1 = ax.get_legend_handles_labels()
+        lines2, labels2 = ax_b.get_legend_handles_labels()
+        ax.legend(lines1 + lines2, labels1 + labels2, 
+                  loc='upper right')
+        ax.set_zorder(1) # make it on top
+        ax.set_frame_on(False) # make it transparent
+        '''
+        ax.set_title(f'Switch day {predicted_days[0]}\n'+
+                     f'Peak I (act.):{actual_peak_I:.2f}, '+
+                     f'Peak I (pred.):{predicted_peak_I:.2f}, \n'+
+                     f'Peak Inc (act.):{actual_peak_Inc:.2f}, '+
+                     f'Peak Inc (pred.):{predicted_peak_Inc:.2f}, \n'+
+                     f'R2 I:{r2:.2f} '+
+                     f'R2 Inc:{r2_Inc:.2f} \n'+
+                     f'RMSE Beta:{rmse_Beta:.7f}',
+                     fontsize=10)
+
+        plt.savefig(f'results/ba100_example{predicted_beta[0]}.pdf', format='pdf', 
+                    bbox_inches='tight') 
     '''
     return rmse_I, rmse_Inc, rmse_Beta, r2, r2_Inc, r2_I_full, r2_Inc_full, peak
 
@@ -208,7 +211,8 @@ def main_f(I_prediction_method, count_stoch_line,
            show_fig_flag, seed_dirs='test/', sigma=0.1, gamma=0.08,
            ax = None, model_path='', perc_switch=0.01,
           is_filename=False, on_incidence=False,
-          switch_on_incidence=False,detailed=False):
+          switch_on_incidence=False,detailed=False,
+          topology='ba'):
     '''
     Main function
     
@@ -232,11 +236,13 @@ def main_f(I_prediction_method, count_stoch_line,
         Graph for seeds.
     '''
     features_reg = ''
-    if ax is None:
+    if (ax is None) and (show_fig_flag):
         row_n = len(seed_numbers)//2+math.ceil(len(seed_numbers)%2)
         fig, axes = plt.subplots(row_n, 2, figsize=(10, row_n*3), squeeze=False)
         axes = axes.flatten()
         #axes = np.arange(len(seed_numbers))
+    elif not show_fig_flag:
+        axes=[0]
     else:
         row_n=0
         axes = ax
@@ -261,9 +267,12 @@ def main_f(I_prediction_method, count_stoch_line,
         # read the DataFrame of the seed: S,[E],I,R,Beta
         if is_filename:
             _, beta, gc,dc, initi, alpha, _, seed = seed_number[0].split('_')
-            filen = f'p_{round(float(beta), 2)}_{gc}_{dc}_{initi}_{round(float(alpha), 2)}_seed_{seed}' 
-            #seed_df = pd.read_csv(seed_dirs+filen)
-            seed_df = pd.read_csv(seed_dirs+seed_number[0])
+            
+            if topology=='sw':
+                filen = f'p_{round(float(beta), 2)}_{gc}_{dc}_{initi}_{round(float(alpha), 2)}_seed_{seed}' 
+                seed_df = pd.read_csv(seed_dirs+filen)
+            else:
+                seed_df = pd.read_csv(seed_dirs+seed_number[0])
             #print(seed_dirs+seed_number[0])
             window_size = 4
         else:
@@ -285,7 +294,7 @@ def main_f(I_prediction_method, count_stoch_line,
             seed_df['incidence'] = 0
         #seed_df = seed_df[(seed_df['E'] > 0)|(seed_df['I'] > 0)].fillna(0)
               
-        seed_df = seed_df.iloc[:100].fillna(0)
+        seed_df = seed_df.fillna(0)
         seed_df.replace([np.inf, -np.inf], 0, inplace=True)
         
         # switch moment
@@ -364,15 +373,19 @@ def main_f(I_prediction_method, count_stoch_line,
                 
         end_time = time.time()
         execution_time.append(end_time - start_time)
-
-        #if ax is None:
+        if show_fig_flag:
+            ax_to_func = axes[idx]
+        else:
+            ax_to_func = axes[0]
+            
         # plot graph for seed_number
         rmse_I, rmse_Inc, rmse_Beta, r2, r2_Inc, \
-            r2_I_full, r2_Inc_full, peak = plot_one(axes[idx], chosen_col,
+            r2_I_full, r2_Inc_full, peak = plot_one(ax_to_func, chosen_col,
                                                     predicted_days, 
                             seed_df, predicted_I, predicted_Inc,
                             beggining_beta, predicted_beta, 
-                            seed_number, end_time - start_time)  
+                            seed_number, end_time - start_time,
+                            show_fig_flag)  
    
         all_rmse_I.append(rmse_I)
         all_rmse_Inc.append(rmse_Inc)
