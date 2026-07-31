@@ -22,6 +22,7 @@ def cpoint_fraq_people(chosen_col, seed_df, n_people,
     
     switch = seed_df[seed_df[chosen_col]>n_people]
     # if there's such a day
+    print('was there?',switch.shape[0], min_day)
     if switch.shape[0]:
         # if it's later than min_day
         if switch.index[0] > min_day:

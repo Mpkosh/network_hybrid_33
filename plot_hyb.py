@@ -1,16 +1,11 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.gridspec as gridspec
 from sklearn.metrics import root_mean_squared_error as rmse
 from sklearn.metrics import r2_score
 import time
-import tkinter as tk
-from tkinter import messagebox
 import math
-import matplotlib as mpl
-from scipy.spatial import ConvexHull
-
+import os
 # our functions
 import predict_Beta_I
 import choice_start_day
@@ -312,6 +307,7 @@ def main_f(I_prediction_method, count_stoch_line,
                                                    min_day=window_size,
                                                    frac=perc_switch,
                                                    n_people=n_people)
+        print(start_day,n_people,type_start_day,perc_switch)
         '''
         # ЗА сколько ДО пика
         if not isinstance(type_start_day, str):
@@ -429,3 +425,101 @@ def main_f(I_prediction_method, count_stoch_line,
                predicted_I, beggining_beta, predicted_beta, 
                seed_number, end_time - start_time)'''
 
+
+def apply_methods(seed_dirs='initial_data/initial_data_ba_10000/',
+                  seed_numbers=[], on_incidence=False, 
+                  switch_on_incidence=False,
+                 idx_s=0, idx_e=11, show_fig_flag=False,
+                 is_filename=False, sigma=0.1, gamma=0.08, perc_switch=0.01,
+                  stoch=0,
+                 suff_m='sw100k', suff='sw100k'):
+    
+    #df_seeds = pd.read_csv(df_seeds)
+    if is_filename:
+        col = 'file'
+    else:
+        col='seed_number'
+        
+    #seed_numbers = df_seeds[df_seeds.set=='test'][col].values[:n_seeds]
+
+    types_start_day = ['fraq_people']#, 'roll_var', 'roll_var_seq']
+
+    methods = ['last value','expanding mean last value',
+               'median beta', 
+               #'regression (day)',
+               'regression beta', #'arimax',
+               'lstm'
+              ]
+
+    new_labels = ['last_value', 'expanding_mean_last_value', 
+
+            'median_beta', #'regression_day',
+            'regression_beta', #'arimax',
+                  'lstm_day_E_previous_I'
+                 ]
+    topology =suff_m[:2] 
+    for type_start_day in types_start_day:
+
+        for beta_pred,new_label in zip(methods[idx_s:idx_e], 
+                                       new_labels[idx_s:idx_e]):
+
+            if 'median' in beta_pred:
+                model_path = f'{suff_m}_median_beta.csv'
+            elif 'regression beta' in beta_pred:
+                model_path = f'{suff_m}_regression_bt.joblib'
+            elif 'lstm' in beta_pred:
+                model_path = f'{suff_m}_lstm_4_001_s10'   
+            else:
+                model_path=''
+            print('path: ', model_path)
+            try:
+                all_rmse_I, all_rmse_Inc, all_rmse_Beta, \
+                all_r2, all_r2_Inc, all_r2_full, all_r2_Inc_full,\
+                all_peak, \
+                    execution_time, start_days = main_f(I_prediction_method='seir', 
+                                        count_stoch_line=stoch, 
+                                        beta_prediction_method=beta_pred, 
+                                        type_start_day=type_start_day, 
+                                        seed_numbers=seed_numbers, 
+                                        show_fig_flag=show_fig_flag,
+                                        seed_dirs=seed_dirs, 
+                                        sigma=sigma, gamma=gamma, 
+                                        ax=None, model_path=model_path,
+                                        perc_switch=perc_switch,
+                                        is_filename=is_filename,
+                                        on_incidence=on_incidence,
+                                        switch_on_incidence=switch_on_incidence,
+                                        topology=topology)
+                
+                # creating a dataframe for peaks
+                all_peak = pd.DataFrame(all_peak, 
+                                columns=['actual_peak_I', 'predicted_peak_I', 
+                                        'actual_peak_Inc', 'predicted_peak_inc',
+                                        'actual_peak_day', 'predicted_peak_day',
+                                        'actual_peak_day_Inc', 'predicted_peak_day_inc'])
+                # creating a dataframe for peaks RMSE, predicted time, start day
+                rmse_df = pd.DataFrame({
+                    'rmse_I': all_rmse_I,
+                    'rmse_Inc': all_rmse_Inc,
+                    'rmse_Beta': all_rmse_Beta,
+                    'r2': all_r2,
+                    'r2_Inc': all_r2_Inc,
+                    'r2_full': all_r2_full,
+                    'r2_Inc_full': all_r2_Inc_full,
+                    'time_predict': execution_time,
+                    f'{type_start_day}': start_days})
+
+                # merging dataframes
+                results = pd.concat([rmse_df, all_peak], axis=1)
+                folder_name = seed_dirs.split('/')[-2]
+                
+            except FileNotFoundError as e:
+                print(e)
+                
+            if not show_fig_flag:
+                path = f'results/{folder_name}/{type_start_day}/'
+                if not os.path.exists(path):
+                    os.makedirs(path)
+                results.to_csv(f'{path}/{new_label}_results_{suff}.csv', 
+                           index=False)
+                

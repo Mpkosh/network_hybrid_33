@@ -2,11 +2,11 @@ import pandas as pd
 import numpy as np
 import os
 import joblib
-#from tensorflow.keras.models import load_model
+from tensorflow.keras.models import load_model
 from sklearn.preprocessing import StandardScaler
 from scipy.optimize import curve_fit
 #from statsmodels.tsa.statespace.sarimax import SARIMAXResults
-#import tensorflow as tf
+import tensorflow as tf
 # our functions
 import seir_discrete 
 
